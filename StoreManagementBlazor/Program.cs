@@ -1,8 +1,16 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using StoreManagementBlazor.Models;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseMySql(cs, ServerVersion.AutoDetect(cs));
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
