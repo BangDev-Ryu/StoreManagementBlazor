@@ -3,7 +3,11 @@
 @using StoreManagementBlazor.Services
 @inject PromotionService PromotionService
 @inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+
 @rendermode InteractiveServer
+
+<PageTitle>Promotion Create</PageTitle>
 
 <div class="container-fluid mt-4" style="user-select: none;">
     <h1 class="mt-4">Tạo mã khuyến mãi</h1>
@@ -24,7 +28,7 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Mã khuyến mãi</label>
                         <InputText @bind-Value="promotion.PromoCode" class="form-control" placeholder="VD: SALE50" />
-                        <ValidationMessage For="() => promotion.PromoCode" class="text-danger small" />
+                        <ValidationMessage For="() => promotion.PromoCode" class="text-danger small mt-2" />
                     </div>
 
                     <div class="col-md-6">
@@ -52,25 +56,25 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Giá trị tối thiểu đơn hàng</label>
                         <InputNumber @bind-Value="promotion.MinOrderAmount" class="form-control" min="0" step="1000" placeholder="VD: 100000" />
-                        <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small" />
+                        <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small mt-2" />
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Ngày bắt đầu</label>
                         <InputDate @bind-Value="promotion.StartDate" class="form-control" />
-                        <ValidationMessage For="() => promotion.StartDate" class="text-danger small" />
+                        <ValidationMessage For="() => promotion.StartDate" class="text-danger small mt-2" />
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Ngày kết thúc</label>
                         <InputDate @bind-Value="promotion.EndDate" class="form-control" />
-                        <ValidationMessage For="() => promotion.EndDate" class="text-danger small" />
+                        <ValidationMessage For="() => promotion.EndDate" class="text-danger small mt-2" />
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">Số lần sử dụng (0 = không giới hạn)</label>
                         <InputNumber @bind-Value="promotion.UsageLimit" class="form-control" min="0" />
-                        <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small" />
+                        <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small mt-2" />
                     </div>
 
                     <div class="col-md-4">
@@ -92,31 +96,33 @@
 </div>
 
 @code {
-    // Khởi tạo giá trị mặc định cho Form
+
     private Promotion promotion = new Promotion
     {
-        StartDate = DateOnly.FromDateTime(DateTime.Now),
-        EndDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+        StartDate = DateTime.Now,
+        EndDate = DateTime.Now.AddDays(14),
         Status = "active",
         DiscountType = "percent",
         UsageLimit = 0
     };
 
-    // Hàm xử lý logic khi người dùng đổi dropdown "Loại giảm giá"
-    // Thay thế hoàn toàn đoạn Script JS cũ
     private void OnDiscountTypeChanged()
     {
-        // Reset giá trị về 0 để tránh nhầm lẫn (ví dụ đang nhập 50.000đ mà chuyển sang % thì thành 50.000% là sai)
         promotion.DiscountValue = 0;
     }
 
-    // Hàm xử lý khi bấm nút Lưu (Submit)
     private async Task HandleSubmit()
     {
-        // Gọi Service lưu vào Database
-        await PromotionService.CreatePromotion(promotion);
+        var result = await PromotionService.CreatePromotion(promotion);
 
-        // Chuyển hướng về trang danh sách
+        if (!result.success)
+        {
+            toastService.ShowError(result.message);
+            return;
+        }
+
+        toastService.ShowSuccess(result.message);
+        await Task.Delay(1000);
         Navigation.NavigateTo("/promotions");
     }
 }

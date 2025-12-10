@@ -70,7 +70,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="fw-bold">Giá trị giảm:</label>
                         <div class="p-3 bg-light border rounded">
-                            @(promotion.DiscountValue.ToString("N0", new CultureInfo("vi-VN")))
+                            @(promotion.DiscountValue?.ToString("N0", new CultureInfo("vi-VN")))
                             @(promotion.DiscountType == "percent" ? "%" : "đ")
                         </div>
                     </div>

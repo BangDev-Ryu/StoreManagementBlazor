@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Blazored.Toast;
+using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
 using StoreManagementBlazor.Models;
 using StoreManagementBlazor.Services;
@@ -12,7 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     var cs = builder.Configuration.GetConnectionString("DefaultConnection");
     options.UseMySql(cs, ServerVersion.AutoDetect(cs));
 });
-
+builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<PromotionService>();
 
 // Add services to the container.
