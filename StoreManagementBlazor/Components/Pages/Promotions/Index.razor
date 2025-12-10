@@ -94,9 +94,9 @@
                                 @(p.Status == "active" ? "Đang hoạt động" : "Ngưng hoạt động")
                             </td>
                             <td class="text-center align-middle">
-                                <NavLink class="btn btn-sm btn-outline-primary" href="/promotions/details/@p.PromoId">Chi tiết</NavLink>
-                                <NavLink class="btn btn-sm btn-outline-secondary" href="/promotions/edit/@p.PromoId">Sửa</NavLink>
-                                <NavLink class="btn btn-sm btn-outline-danger" href="/promotions/delete/@p.PromoId">Xóa</NavLink>
+                                <NavLink class="btn btn-info" href="@($"/promotions/details/{p.PromoId}")">Chi tiết</NavLink>
+                                <NavLink class="btn btn-warning" href="@($"/promotions/edit/{p.PromoId}")">Sửa</NavLink>
+                                <NavLink class="btn btn-danger" href="@($"/promotions/delete/{p.PromoId}")">Xóa</NavLink>
                             </td>
                         </tr>
                     }
