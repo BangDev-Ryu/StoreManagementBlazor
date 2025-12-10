@@ -19,11 +19,11 @@ public partial class Promotion
 
     public DateOnly EndDate { get; set; }
 
-    public decimal? MinOrderAmount { get; set; }
+    public decimal? MinOrderAmount { get; set; } = 0;
 
-    public int? UsageLimit { get; set; }
+    public int? UsageLimit { get; set; } = 0;
 
-    public int? UsedCount { get; set; }
+    public int? UsedCount { get; set; } = 0;
 
     public string? Status { get; set; }
 }

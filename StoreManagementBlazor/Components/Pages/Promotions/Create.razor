@@ -1,0 +1,122 @@
+﻿@page "/promotions/create"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject PromotionService PromotionService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Tạo mã khuyến mãi</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/promotions">Khuyến mãi</a></li>
+        <li class="breadcrumb-item active">Tạo mã khuyến mãi</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin khuyến mãi
+        </div>
+        <div class="card-body">
+            <EditForm Model="promotion" OnValidSubmit="HandleSubmit" FormName="createPromoForm">
+                <DataAnnotationsValidator />
+                @* <ValidationSummary /> *@ <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Mã khuyến mãi</label>
+                        <InputText @bind-Value="promotion.PromoCode" class="form-control" placeholder="VD: SALE50" />
+                        <ValidationMessage For="() => promotion.PromoCode" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Mô tả</label>
+                        <InputText @bind-Value="promotion.Description" class="form-control" placeholder="Mô tả ngắn gọn..." />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Loại giảm giá</label>
+                        <InputSelect @bind-Value="promotion.DiscountType" @bind-Value:after="OnDiscountTypeChanged" class="form-select">
+                            <option value="percent">Phần trăm (%)</option>
+                            <option value="fixed">Số tiền</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Giá trị giảm</label>
+                        <InputNumber @bind-Value="promotion.DiscountValue"
+                                     class="form-control"
+                                     min="0"
+                                     placeholder="@(promotion.DiscountType == "percent" ? "VD: 10 (%)" : "VD: 10000")" />
+                        <ValidationMessage For="() => promotion.DiscountValue" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Giá trị tối thiểu đơn hàng</label>
+                        <InputNumber @bind-Value="promotion.MinOrderAmount" class="form-control" min="0" step="1000" placeholder="VD: 100000" />
+                        <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Ngày bắt đầu</label>
+                        <InputDate @bind-Value="promotion.StartDate" class="form-control" />
+                        <ValidationMessage For="() => promotion.StartDate" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Ngày kết thúc</label>
+                        <InputDate @bind-Value="promotion.EndDate" class="form-control" />
+                        <ValidationMessage For="() => promotion.EndDate" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Số lần sử dụng (0 = không giới hạn)</label>
+                        <InputNumber @bind-Value="promotion.UsageLimit" class="form-control" min="0" />
+                        <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Trạng thái</label>
+                        <InputSelect @bind-Value="promotion.Status" class="form-select">
+                            <option value="active">Đang hoạt động</option>
+                            <option value="inactive">Ngưng hoạt động</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="/promotions" class="btn btn-outline-secondary px-4">Hủy</a>
+                    <button type="submit" class="btn btn-primary px-4">Lưu</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Khởi tạo giá trị mặc định cho Form
+    private Promotion promotion = new Promotion
+    {
+        StartDate = DateOnly.FromDateTime(DateTime.Now),
+        EndDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7)),
+        Status = "active",
+        DiscountType = "percent",
+        UsageLimit = 0
+    };
+
+    // Hàm xử lý logic khi người dùng đổi dropdown "Loại giảm giá"
+    // Thay thế hoàn toàn đoạn Script JS cũ
+    private void OnDiscountTypeChanged()
+    {
+        // Reset giá trị về 0 để tránh nhầm lẫn (ví dụ đang nhập 50.000đ mà chuyển sang % thì thành 50.000% là sai)
+        promotion.DiscountValue = 0;
+    }
+
+    // Hàm xử lý khi bấm nút Lưu (Submit)
+    private async Task HandleSubmit()
+    {
+        // Gọi Service lưu vào Database
+        await PromotionService.CreatePromotion(promotion);
+
+        // Chuyển hướng về trang danh sách
+        Navigation.NavigateTo("/promotions");
+    }
+}

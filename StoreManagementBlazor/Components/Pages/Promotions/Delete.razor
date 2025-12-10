@@ -1,0 +1,126 @@
+﻿@page "/promotions/delete/{id:int}"
+@using System.Globalization
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject PromotionService PromotionService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container-fluid px-4" style="user-select: none;">
+    <h1 class="mt-4">Xóa khuyến mãi</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/promotions">Khuyến mãi</a></li>
+        <li class="breadcrumb-item active">Xóa khuyến mãi</li>
+    </ol>
+
+    @if (promotion == null)
+    {
+        <div class="text-center p-3">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Đang tải dữ liệu...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card border-danger mb-4 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-trash-alt me-2"></i> Xác nhận xóa khuyến mãi
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Cảnh báo!</strong> Bạn có chắc chắn muốn xóa mã khuyến mãi này? Hành động này không thể hoàn tác.
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold">Mã khuyến mãi:</label>
+                    <div class="p-3 bg-light border rounded">
+                        <span class="badge bg-primary fs-6 d-inline-flex justify-content-center align-items-center px-3 py-2">
+                            @promotion.PromoCode
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Mô tả:</label>
+                        <div class="p-3 bg-light border rounded">
+                            @(string.IsNullOrEmpty(promotion.Description) ? "-" : promotion.Description)
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Trạng thái:</label>
+                        <div class="p-3 bg-light border rounded">
+                            @if (promotion.Status == "active")
+                            {
+                                <span class="badge bg-success">Đang hoạt động</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Ngưng hoạt động</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Giá trị giảm:</label>
+                        <div class="p-3 bg-light border rounded">
+                            @(promotion.DiscountValue.ToString("N0", new CultureInfo("vi-VN")))
+                            @(promotion.DiscountType == "percent" ? "%" : "đ")
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Số lần sử dụng:</label>
+                        <div class="p-3 bg-light border rounded">
+                            @(promotion.UsedCount ?? 0) /
+                            @(promotion.UsageLimit == 0 ? "Không giới hạn" : promotion.UsageLimit.ToString())
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="/promotions" class="btn btn-secondary px-4">
+                        <i class="fas fa-times me-1"></i> Hủy
+                    </a>
+
+                    <button class="btn btn-danger px-4" @onclick="ConfirmDelete">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private Promotion? promotion;
+
+    // 1. Load dữ liệu lên để người dùng xem trước khi xóa
+    protected override async Task OnInitializedAsync()
+    {
+        promotion = await PromotionService.GetPromotionById(id);
+
+        if (promotion == null)
+        {
+            Navigation.NavigateTo("/promotions");
+        }
+    }
+
+    // 2. Hàm xử lý xóa
+    private async Task ConfirmDelete()
+    {
+        // Gọi Service xóa trong DB
+        await PromotionService.DeletePromotion(id);
+
+        // Xóa xong thì quay về trang danh sách
+        Navigation.NavigateTo("/promotions");
+    }
+}

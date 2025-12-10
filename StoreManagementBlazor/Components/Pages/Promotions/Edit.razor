@@ -1,0 +1,152 @@
+﻿@page "/promotions/edit/{id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject PromotionService PromotionService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Sửa khuyến mãi</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/promotions">Khuyến mãi</a></li>
+        <li class="breadcrumb-item active">Sửa khuyến mãi</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin khuyến mãi
+        </div>
+        <div class="card-body">
+            @if (promotion == null)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="promotion" OnValidSubmit="HandleSubmit" FormName="editPromoForm">
+                    <DataAnnotationsValidator />
+
+                    <input type="hidden" value="@promotion.PromoId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Mã khuyến mãi (Không được sửa)</label>
+                            <InputText @bind-Value="promotion.PromoCode" class="form-control" readonly style="background-color: #e9ecef;" />
+                            <ValidationMessage For="() => promotion.PromoCode" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Mô tả</label>
+                            <InputText @bind-Value="promotion.Description" class="form-control" placeholder="Mô tả ngắn gọn..." />
+                            <ValidationMessage For="() => promotion.Description" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Loại giảm giá</label>
+                            <InputSelect @bind-Value="promotion.DiscountType" @bind-Value:after="OnDiscountTypeChanged" class="form-select">
+                                <option value="percent">Phần trăm (%)</option>
+                                <option value="fixed">Số tiền</option>
+                            </InputSelect>
+                            <ValidationMessage For="() => promotion.DiscountType" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Giá trị giảm</label>
+                            <InputNumber @bind-Value="promotion.DiscountValue"
+                                         class="form-control"
+                                         min="0"
+                                         placeholder="@(promotion.DiscountType == "percent" ? "VD: 10 (%)" : "VD: 10000")" />
+                            <ValidationMessage For="() => promotion.DiscountValue" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Giá trị tối thiểu đơn hàng</label>
+                            <InputNumber @bind-Value="promotion.MinOrderAmount" class="form-control" min="0" step="1000" />
+                            <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Ngày bắt đầu</label>
+                            <InputDate @bind-Value="promotion.StartDate" class="form-control" />
+                            <ValidationMessage For="() => promotion.StartDate" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Ngày kết thúc</label>
+                            <InputDate @bind-Value="promotion.EndDate" class="form-control" />
+                            <ValidationMessage For="() => promotion.EndDate" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Số lần sử dụng (0 = không giới hạn)</label>
+                            <InputNumber @bind-Value="promotion.UsageLimit" class="form-control" min="0" />
+                            <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Trạng thái</label>
+                            <InputSelect @bind-Value="promotion.Status" class="form-select">
+                                <option value="active">Đang hoạt động</option>
+                                <option value="inactive">Ngưng hoạt động</option>
+                            </InputSelect>
+                            <ValidationMessage For="() => promotion.Status" class="text-danger small" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a href="/promotions" class="btn btn-outline-secondary px-4">Hủy</a>
+                        <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // 1. Nhận tham số ID từ URL (/promotions/edit/{id})
+    [Parameter]
+    public int id { get; set; }
+
+    private Promotion? promotion;
+
+    // 2. Chạy khi trang vừa mở: Lấy dữ liệu cũ lên
+    protected override async Task OnInitializedAsync()
+    {
+        // Giả lập độ trễ mạng xíu để thấy hiệu ứng loading (tuỳ chọn)
+        // await Task.Delay(500);
+
+        promotion = await PromotionService.GetPromotionById(id);
+
+        // Nếu ID sai hoặc không tìm thấy, đá về trang danh sách ngay
+        if (promotion == null)
+        {
+            Navigation.NavigateTo("/promotions");
+        }
+    }
+
+    // 3. Logic thay thế JavaScript cũ: Reset giá trị khi đổi loại giảm giá
+    private void OnDiscountTypeChanged()
+    {
+        if (promotion != null)
+        {
+            promotion.DiscountValue = 0;
+        }
+    }
+
+    // 4. Xử lý nút Lưu
+    private async Task HandleSubmit()
+    {
+        if (promotion != null)
+        {
+            await PromotionService.UpdatePromotion(promotion);
+            Navigation.NavigateTo("/promotions");
+        }
+    }
+}
