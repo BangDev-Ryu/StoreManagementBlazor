@@ -99,14 +99,14 @@
 
 @code {
     [Parameter]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     private Promotion? promotion;
 
-    // 1. Load dữ liệu lên để người dùng xem trước khi xóa
+    // Load dữ liệu lên để người dùng xem trước khi xóa
     protected override async Task OnInitializedAsync()
     {
-        promotion = await PromotionService.GetPromotionById(id);
+        promotion = await PromotionService.GetPromotionById(Id);
 
         if (promotion == null)
         {
@@ -114,13 +114,11 @@
         }
     }
 
-    // 2. Hàm xử lý xóa
+    // Hàm xử lý xóa
     private async Task ConfirmDelete()
     {
         // Gọi Service xóa trong DB
-        await PromotionService.DeletePromotion(id);
-
-        // Xóa xong thì quay về trang danh sách
+        await PromotionService.DeletePromotion(Id);
         Navigation.NavigateTo("/promotions");
     }
 }

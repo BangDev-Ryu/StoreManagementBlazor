@@ -12,11 +12,34 @@ namespace StoreManagementBlazor.Services
             _context = context;
         }
 
-        public async Task<List<Promotion>> GetAll()
+        public async Task<(List<Promotion> Promotions, int TotalCount)> GetAll(
+            string? searchText = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int page = 1,
+            int pageSize = 5)
         {
-            return await _context.Promotions
-                .OrderBy(p=> p.StartDate)
+            var query = _context.Promotions.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+                query = query.Where(p => p.PromoCode.Contains(searchText));
+
+            if (startDate.HasValue)
+                query = query.Where(p => p.StartDate >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(p => p.EndDate <= endDate.Value);
+
+            int totalCount = await query.CountAsync();
+
+            var data = await query
+                .Where(p => p.EndDate > DateTime.Now)
+                .OrderBy(p => p.StartDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (data, totalCount);
         }
 
         public async Task<Promotion?> GetPromotionById(int id)
@@ -35,36 +58,42 @@ namespace StoreManagementBlazor.Services
                 return (false, "Mã khuyến mãi đã tồn tại.");
             }
 
+            if(promotion.StartDate < DateTime.Now.Date)
+            {
+                return (false, "Ngày bắt đầu không được nhỏ hơn ngày hiện tại.");
+            }
+
             _context.Promotions.Add(promotion);
             await _context.SaveChangesAsync();
 
             return (true, "Tạo khuyến mãi thành công.");
         }
-        private bool IsEqual(Promotion oldP, Promotion newP)
-        {
-            return
-                oldP.PromoCode == newP.PromoCode &&
-                oldP.Description == newP.Description &&
-                oldP.DiscountType == newP.DiscountType &&
-                oldP.DiscountValue == newP.DiscountValue &&
-                oldP.StartDate.Date == newP.StartDate.Date &&
-                oldP.EndDate.Date == newP.EndDate.Date &&
-                oldP.MinOrderAmount == newP.MinOrderAmount &&
-                oldP.UsageLimit == newP.UsageLimit &&
-                oldP.Status == newP.Status;
-        }
 
         public async Task<(bool success, string message)> UpdatePromotion(Promotion promotion)
         {
-            var existingPromo = await _context.Promotions.FindAsync(promotion.PromoId);
+            var existingPromo = await _context.Promotions
+                                      .FirstOrDefaultAsync(p => p.PromoId == promotion.PromoId);
 
             if (existingPromo == null)
                 return (false, "Không tìm thấy khuyến mãi.");
 
-            if (IsEqual(existingPromo, promotion))
-                return (true, "Không có thay đổi nào để cập nhật.");
+            var today = DateTime.Now.Date;
 
-            // Cập nhật giá trị
+            if (existingPromo.StartDate >= today)
+            {
+                if (promotion.StartDate < today && promotion.StartDate != existingPromo.StartDate)
+                {
+                    return (false, "Chương trình chưa diễn ra, ngày bắt đầu phải từ hôm nay trở đi.");
+                }
+            }
+            else
+            {
+                if (promotion.StartDate != existingPromo.StartDate)
+                {
+                    return (false, "Không thể thay đổi ngày bắt đầu của chương trình đang diễn ra.");
+                }
+            }
+
             existingPromo.PromoCode = promotion.PromoCode;
             existingPromo.Description = promotion.Description;
             existingPromo.DiscountType = promotion.DiscountType;
@@ -75,10 +104,15 @@ namespace StoreManagementBlazor.Services
             existingPromo.UsageLimit = promotion.UsageLimit;
             existingPromo.Status = promotion.Status;
 
-            // Lưu xuống DB
-            await _context.SaveChangesAsync();
-
-            return (true, "Cập nhật thành công.");
+            try
+            {
+                await _context.SaveChangesAsync();
+                return (true, "Cập nhật thành công.");
+            }
+            catch (Exception ex)
+            {
+                return (false, "Lỗi khi lưu dữ liệu: " + ex.Message);
+            }
         }
         public async Task DeletePromotion(int id)
         {

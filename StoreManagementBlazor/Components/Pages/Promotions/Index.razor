@@ -65,17 +65,17 @@
                 </tr>
             </thead>
             <tbody>
-                @if (paginatedPromotions == null || !paginatedPromotions.Any())
+                @if (allPromotions == null || !allPromotions.Any())
                 {
                     <tr>
                         <td colspan="6" class="text-center text-muted">
-                            @(hasFilter ? "Không có khuyến mãi phù hợp với bộ lọc." : "Chưa có dữ liệu khuyến mãi.")
+                            @(hasFilter ? "Không có khuyến mãi phù hợp." : "Đang cập nhật dữ liệu khuyến mãi.")
                         </td>
                     </tr>
                 }
                 else
                 {
-                    foreach (var p in paginatedPromotions)
+                    foreach (var p in allPromotions)
                     {
                         <tr>
                             <td>@p.PromoCode</td>
@@ -163,79 +163,58 @@
 </div>
 
 @code {
-    private List<Promotion> allPromotions = new(); // Dữ liệu gốc
-    private List<Promotion> filteredPromotions = new(); // Dữ liệu sau khi lọc
-    private List<Promotion> paginatedPromotions = new(); // Dữ liệu hiển thị trên trang hiện tại
+    private List<Promotion> allPromotions = new(); 
 
-    // Các biến Filter
     private string searchText = "";
     private DateTime? startDate;
     private DateTime? endDate;
-    private bool hasFilter => !string.IsNullOrEmpty(searchText) || startDate.HasValue || endDate.HasValue;
+    private bool hasFilter =>
+        !string.IsNullOrWhiteSpace(searchText) || startDate.HasValue || endDate.HasValue;
 
-    // Các biến Pagination
     private int currentPage = 1;
     private int pageSize = 5;
     private int totalPages = 1;
+    private int totalCount = 0;
+   
 
     // Timer để Debounce (chờ người dùng gõ xong mới tìm)
     private System.Timers.Timer? _debounceTimer;
 
-    // === Lifecycle ===
     protected override async Task OnInitializedAsync()
     {
-        // Khởi tạo timer debounce (500ms)
+        // Khởi tạo timer debounce (0,5s)
         _debounceTimer = new System.Timers.Timer(500);
         _debounceTimer.AutoReset = false;
         _debounceTimer.Elapsed += async (sender, e) =>
         {
-            await InvokeAsync(() => { LoadData(); StateHasChanged(); });
+            await InvokeAsync(async () => 
+            { 
+                currentPage = 1; 
+                await LoadData(); 
+                StateHasChanged(); 
+            });
         };
 
-        // Lấy toàn bộ dữ liệu lần đầu
-        await LoadFullData();
+        // Load dữ liệu lần đầu 
+        await LoadData();
     }
 
-    private async Task LoadFullData()
+    private async Task LoadData()
     {
-        // Nếu dữ liệu quá lớn => chuyển logic lọc/phân trang xuống Service/DB (SQL)
-        allPromotions = await PromotionService.GetAll();
-        LoadData(); 
-    }
+        var result = await PromotionService.GetAll(
+         searchText: searchText,
+         startDate: startDate,
+         endDate: endDate,
+         page: currentPage,
+         pageSize: pageSize
+     );
 
-    private void LoadData()
-    {
-        var query = allPromotions.AsQueryable();
+        allPromotions = result.Promotions;
+        totalCount = result.TotalCount;
 
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            query = query.Where(p => p.PromoCode.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (startDate.HasValue)
-        {
-            query = query.Where(p => p.StartDate >= startDate.Value);
-        }
-
-        if (endDate.HasValue)
-        {
-            if (startDate.HasValue && startDate > endDate)
-            {
-                
-            }
-            query = query.Where(p => p.EndDate <= endDate.Value);
-        }
-
-        filteredPromotions = query.ToList();
-
-        totalPages = (int)Math.Ceiling((double)filteredPromotions.Count / pageSize);
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
         if (totalPages < 1) totalPages = 1;
         if (currentPage > totalPages) currentPage = totalPages;
-
-        paginatedPromotions = filteredPromotions
-            .Skip((currentPage - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
     }
 
     private void OnSearchInput(ChangeEventArgs e)
@@ -247,32 +226,32 @@
     }
 
     // Xử lý khi đổi số dòng/trang
-    private void OnPageSizeChanged(ChangeEventArgs e)
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int newSize))
         {
             pageSize = newSize;
             currentPage = 1;
-            LoadData();
+            await LoadData();
         }
     }
 
     // Xử lý chuyển trang
-    private void ChangePage(int page)
+    private async Task ChangePage(int page)
     {
         if (page < 1 || page > totalPages) return;
         currentPage = page;
-        LoadData();
+        await LoadData();
     }
 
     // Nút Reset
-    private void ResetFilter()
+    private async Task ResetFilter()
     {
         searchText = "";
         startDate = null;
         endDate = null;
         pageSize = 5;
         currentPage = 1;
-        LoadData();
+        await LoadData();
     }
 }

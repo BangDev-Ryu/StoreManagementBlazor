@@ -1,10 +1,12 @@
 ﻿@page "/promotions/edit/{id:int}"
+@using System.Globalization
+@using Microsoft.EntityFrameworkCore
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject PromotionService PromotionService
 @inject NavigationManager Navigation
+@inject ApplicationDbContext _context;
 @inject Blazored.Toast.Services.IToastService toastService
-
 @rendermode InteractiveServer
 
 <PageTitle>Promotion Edit</PageTitle>
@@ -62,10 +64,25 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Giá trị giảm</label>
-                            <InputNumber @bind-Value="promotion.DiscountValue"
-                                         class="form-control"
-                                         min="0"
-                                         placeholder="@(promotion.DiscountType == "percent" ? "VD: 10 (%)" : "VD: 10000")" />
+                            @if (promotion.DiscountType == "percent")
+                            {
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="promotion.DiscountValue"
+                                    class="form-control"
+                                    min="0" max="100"
+                                    placeholder="VD: 10 (%)" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="promotion.DiscountValue"
+                                    class="form-control"
+                                    min="0"
+                                    step="1000"
+                                    placeholder="VD: 10000" />
+                                </div>
+                            }
                             <ValidationMessage For="() => promotion.DiscountValue" class="text-danger small mt-2" />
                         </div>
 
@@ -114,16 +131,17 @@
 </div>
 
 @code {
-    // Nhận tham số ID từ URL (/promotions/edit/{id})
+    // Nhận tham số ID từ URL (/promotions/edit/{Id})
     [Parameter]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     private Promotion? promotion;
 
     // Chạy khi trang vừa mở: Lấy dữ liệu cũ lên
     protected override async Task OnInitializedAsync()
     {
-        promotion = await PromotionService.GetPromotionById(id);
+        promotion = await _context.Promotions.AsNoTracking()
+                              .FirstOrDefaultAsync(p => p.PromoId == Id);
 
         if (promotion == null)
         {
