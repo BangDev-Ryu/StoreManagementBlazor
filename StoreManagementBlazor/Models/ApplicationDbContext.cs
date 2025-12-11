@@ -16,6 +16,10 @@ public partial class ApplicationDbContext : DbContext
     {
     }
 
+    public virtual DbSet<Cart> Carts { get; set; }
+
+    public virtual DbSet<CartItem> CartItems { get; set; }
+
     public virtual DbSet<Category> Categories { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
@@ -38,13 +42,60 @@ public partial class ApplicationDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseMySql("server=localhost;database=store_management;user=root", Microsoft.EntityFrameworkCore.ServerVersion.Parse("10.4.32-mariadb"));
+        => optionsBuilder.UseMySql("server=localhost;database=store_management_blazor;user=root", Microsoft.EntityFrameworkCore.ServerVersion.Parse("10.4.32-mariadb"));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .UseCollation("utf8mb4_general_ci")
             .HasCharSet("utf8mb4");
+
+        modelBuilder.Entity<Cart>(entity =>
+        {
+            entity.HasKey(e => e.CartId).HasName("PRIMARY");
+
+            entity.ToTable("carts");
+
+            entity.Property(e => e.CartId)
+                .HasColumnType("int(11)")
+                .HasColumnName("cart_id");
+            entity.Property(e => e.CustomerId)
+                .HasColumnType("int(11)")
+                .HasColumnName("customer_id");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'pending'")
+                .HasColumnType("enum('pending','done')")
+                .HasColumnName("status");
+            entity.Property(e => e.TotalAmount)
+                .HasPrecision(10, 2)
+                .HasColumnName("total_amount");
+        });
+
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.HasKey(e => e.CartItemId).HasName("PRIMARY");
+
+            entity.ToTable("cart_items");
+
+            entity.Property(e => e.CartItemId)
+                .HasColumnType("int(11)")
+                .HasColumnName("cart_item_id");
+            entity.Property(e => e.CartId)
+                .HasColumnType("int(11)")
+                .HasColumnName("cart_id");
+            entity.Property(e => e.Price)
+                .HasPrecision(10, 2)
+                .HasColumnName("price");
+            entity.Property(e => e.ProductId)
+                .HasColumnType("int(11)")
+                .HasColumnName("product_id");
+            entity.Property(e => e.Quantity)
+                .HasColumnType("int(11)")
+                .HasColumnName("quantity");
+            entity.Property(e => e.Subtotal)
+                .HasPrecision(10, 2)
+                .HasColumnName("subtotal");
+        });
 
         modelBuilder.Entity<Category>(entity =>
         {
@@ -85,6 +136,9 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(20)
                 .HasColumnName("phone");
+            entity.Property(e => e.UserId)
+                .HasColumnType("int(11)")
+                .HasColumnName("user_id");
         });
 
         modelBuilder.Entity<Inventory>(entity =>
@@ -104,7 +158,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnType("int(11)")
                 .HasColumnName("quantity");
             entity.Property(e => e.UpdatedAt)
-                .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("current_timestamp()")
                 .HasColumnType("timestamp")
                 .HasColumnName("updated_at");
@@ -321,7 +374,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnName("password");
             entity.Property(e => e.Role)
                 .HasDefaultValueSql("'staff'")
-                .HasColumnType("enum('admin','staff')")
+                .HasColumnType("enum('admin','staff','customer')")
                 .HasColumnName("role");
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
