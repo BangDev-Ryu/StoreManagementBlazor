@@ -1,0 +1,86 @@
+﻿@page "/customers/details/{id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject NavigationManager Navigation
+@inject CustomerService CustomerService
+@inject Blazored.Toast.Services.IToastService toast
+
+@rendermode InteractiveServer
+
+<h3>Chi tiết khách hàng</h3>
+
+@if (customer == null)
+{
+    <div class="alert alert-warning">Không tìm thấy khách hàng.</div>
+}
+else
+{
+    <div class="card shadow-sm mb-3">
+        <div class="card-header text-center py-3 px-4">
+            <h2 class="mb-0">Chi tiết khách hàng #@customer.CustomerId</h2>
+        </div>
+
+        <div class="card-body">
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Mã khách hàng</label>
+                <div class="col-sm-9">
+                    <span>@customer.CustomerId</span>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Tên khách hàng</label>
+                <div class="col-sm-9">
+                    <span>@customer.Name</span>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Số điện thoại</label>
+                <div class="col-sm-9">
+                    <span>@customer.Phone</span>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Email</label>
+                <div class="col-sm-9">
+                    <span>@customer.Email</span>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Địa chỉ</label>
+                <div class="col-sm-9">
+                    <span>@customer.Address</span>
+                </div>
+            </div>
+
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label fw-semibold">Ngày tạo</label>
+                <div class="col-sm-9">
+                    <span>@customer.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-secondary" @onclick="GoBack">Quay lại</button>
+                <a class="btn btn-primary" href="/customers/edit/@customer.CustomerId">Cập nhật</a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    Customer? customer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        customer = await CustomerService.GetById(id);
+    }
+
+    void GoBack() => Navigation.NavigateTo("/customers");
+}

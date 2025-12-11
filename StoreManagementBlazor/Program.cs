@@ -15,6 +15,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<CustomerService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
