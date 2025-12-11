@@ -1,0 +1,127 @@
+﻿@page "/promotions/details/{id:int}"
+@using System.Globalization
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject PromotionService PromotionService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container-fluid px-4" style="user-select: none;">
+    <h1 class="mt-4">Chi tiết khuyến mãi</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/promotions">Khuyến mãi</a></li>
+        <li class="breadcrumb-item active">Chi tiết khuyến mãi</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin khuyến mãi
+        </div>
+        <div class="card-body">
+            @if (promotion == null)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else
+            {
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Mã khuyến mãi:</label>
+                        <div>@promotion.PromoCode</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Mô tả:</label>
+                        <div class="text-wrap text-break">
+                            @promotion.Description
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Loại giảm giá:</label>
+                        <div>@(promotion.DiscountType == "percent" ? "Phần trăm" : "Số tiền")</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Giá trị giảm:</label>
+                        <div>
+                            @(promotion.DiscountValue?.ToString("N0", new CultureInfo("vi-VN")))
+                            @(promotion.DiscountType == "percent" ? "%" : "đ")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Giá trị đơn hàng tối thiểu:</label>
+                        <div>@promotion.MinOrderAmount?.ToString("N0", new CultureInfo("vi-VN")) đ</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Số lần sử dụng:</label>
+                        <div>
+                            @(promotion.UsedCount ?? 0) /
+                            @(promotion.UsageLimit == 0 ? "Không giới hạn" : promotion.UsageLimit.ToString())
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Thời gian áp dụng:</label>
+                        <div>
+                            @promotion.StartDate.ToString("dd/MM/yyyy") -
+                            @promotion.EndDate.ToString("dd/MM/yyyy")
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="fw-bold">Trạng thái:</label>
+                        <div>
+                            @if (promotion.Status == "active")
+                            {
+                                <span class="badge bg-success">Đang hoạt động</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Ngưng hoạt động</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <a href="/promotions/edit/@promotion.PromoId" class="btn btn-primary">
+                        Sửa
+                    </a>
+                    <a href="/promotions" class="btn btn-secondary">
+                        Quay lại
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Promotion? promotion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Gọi Service lấy dữ liệu theo ID
+        promotion = await PromotionService.GetPromotionById(Id);
+
+        // 2. Nếu ID không tồn tại, chuyển hướng về trang danh sách
+        if (promotion == null)
+        {
+            Navigation.NavigateTo("/promotions");
+        }
+    }
+}
