@@ -20,6 +20,10 @@ builder.Services.AddScoped<PromotionService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddBlazoredToast();
+builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<UserService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

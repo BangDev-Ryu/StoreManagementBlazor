@@ -1,0 +1,73 @@
+@page "/users/create"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService ToastService
+@rendermode InteractiveServer
+
+<h3>Thêm người dùng mới</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="user" OnValidSubmit="HandleSubmit" FormName="CreateUserForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label class="form-label">Tên đăng nhập</label>
+                <InputText class="form-control" @bind-Value="user.Username" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Mật khẩu</label>
+                <InputText type="password" class="form-control" @bind-Value="plainPassword" placeholder="Để trống mặc định là 123456" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Họ và tên</label>
+                <InputText class="form-control" @bind-Value="user.FullName" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Vai trò</label>
+                <InputSelect class="form-select" @bind-Value="user.Role">
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                    <option value="customer">Customer</option>
+                </InputSelect>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a href="/users" class="btn btn-secondary">Hủy</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private User user { get; set; } = new User { Role = "staff" };
+    
+    [SupplyParameterFromForm]
+    private string plainPassword { get; set; } = "";
+
+    private async Task HandleSubmit()
+    {
+        if(string.IsNullOrWhiteSpace(user.Username))
+        {
+            ToastService.ShowError("Vui lòng nhập Username");
+            return;
+        }
+
+        var result = await UserService.CreateUserAsync(user, plainPassword);
+        if (result.success)
+        {
+            ToastService.ShowSuccess(result.message);
+            Navigation.NavigateTo("/users");
+        }
+        else
+        {
+            ToastService.ShowError(result.message);
+        }
+    }
+}
