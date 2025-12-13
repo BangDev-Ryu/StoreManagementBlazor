@@ -1,0 +1,51 @@
+﻿@page "/admin/products/delete/{id:int}"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+        <h5>🗑 Xóa sản phẩm</h5>
+    </div>
+
+    <div class="card-body">
+        @if (product == null)
+        {
+            <p>Đang tải...</p>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                Bạn có chắc muốn xóa
+                <b>@product.ProductName</b>?
+            </div>
+
+            <div class="text-end">
+                <button class="btn btn-danger"
+                        @onclick="ConfirmDelete">
+                    Xóa
+                </button>
+                <button class="btn btn-secondary ms-2"
+                        @onclick="@(() => Nav.NavigateTo("/admin/products"))">
+                    Hủy
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Product? product;
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await ProductService.GetByIdAsync(id);
+    }
+
+    async Task ConfirmDelete()
+    {
+        await ProductService.DeleteAsync(product!.ProductId);
+        Nav.NavigateTo("/admin/products");
+    }
+}
