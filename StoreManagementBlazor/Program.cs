@@ -1,7 +1,8 @@
-﻿using Blazored.Toast;
+﻿// Program.cs (giữ nguyên như trước, nhưng thêm comment để rõ)
+using Blazored.Toast;
 using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
-using StoreManagementBlazor.Models;
+using StoreManagementBlazor.Models;  // <-- Thêm nếu cần reference DbContext ở đây (thường không cần)
 using StoreManagementBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<OrdersService>(); // <-- Đã thêm
+builder.Services.AddScoped<PaymentsService>(); // <-- Đã thêm
 
 builder.Services.AddBlazoredToast();
 
@@ -34,9 +37,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
