@@ -19,6 +19,8 @@ builder.Services.AddScoped<PromotionService>();
 builder.Services.AddScoped<UserService>();
 
 builder.Services.AddBlazoredToast();
+builder.Services.AddScoped<InventoryService>();
+
 
 // ================= BLAZOR =================
 builder.Services.AddRazorComponents()

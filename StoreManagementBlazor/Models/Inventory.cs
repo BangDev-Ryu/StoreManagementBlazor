@@ -12,4 +12,7 @@ public partial class Inventory
     public int? Quantity { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public Product? Product { get; set; }
+
 }
