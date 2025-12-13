@@ -16,6 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // ================= SERVICES =================
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<UserService>();
 
 builder.Services.AddBlazoredToast();
