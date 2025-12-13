@@ -1,0 +1,219 @@
+@page "/orders"
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject OrdersService OrdersService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Quản lý đơn hàng</PageTitle>
+
+<div class="container-fluid mt-3" style="user-select:none;">
+    <h2>Quản lý đơn hàng</h2>
+
+    <p>
+        <a href="/orders/create" class="btn btn-primary">
+            + Tạo đơn hàng mới
+        </a>
+    </p>
+
+    @* Hiển thị thông báo (thay thế TempData) *@
+    @if (!string.IsNullOrEmpty(SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @SuccessMessage
+            <button type="button" class="btn-close" @onclick="() => SuccessMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @ErrorMessage
+            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null"></button>
+        </div>
+    }
+
+    <EditForm Model="Filter" OnSubmit="ApplyFilter" FormName="OrdersFilterForm">
+        <div class="row w-100 g-4 align-items-end mb-3" autocomplete="off">
+            <div class="col-md-2">
+                <label class="form-label">Tên khách</label>
+                <InputText @bind-Value="Filter.SearchCustomer" class="form-control" placeholder="Nhập tên" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Ngày tạo</label>
+                <InputText @bind-Value="Filter.SearchDate" class="form-control" placeholder="dd/MM/yyyy" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Từ (₫)</label>
+                <InputNumber @bind-Value="Filter.MinPrice" class="form-control" placeholder="Min giá" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Đến (₫)</label>
+                <InputNumber @bind-Value="Filter.MaxPrice" class="form-control" placeholder="Max giá" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Trạng thái</label>
+                <InputSelect @bind-Value="Filter.Status" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="pending">Chưa thanh toán</option>
+                    <option value="completed">Đã thanh toán</option>
+                </InputSelect>
+            </div>
+            
+            <div class="col-auto d-grid">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+            </div>
+            <div class="col-auto d-grid">
+                <button type="button" class="btn btn-outline-secondary" @onclick="ClearFilter">Đặt lại</button>
+            </div>
+        </div>
+    </EditForm>
+    @if (IsLoading)
+    {
+        <p><em>Đang tải dữ liệu...</em></p>
+    }
+    else if (PagingResult == null || !PagingResult.Items.Any())
+    {
+        <div class="alert alert-info">Không tìm thấy đơn hàng nào khớp với điều kiện.</div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover mt-3">
+            <thead>
+                <tr>
+                    <th style="width: 100px;"># Mã
+                        <a href="javascript:void(0)" @onclick='() => SortBy("id")'>
+                            <i class="fas @(Filter.SortBy == "id" ? "fa-sort-down" : "fa-sort")"></i>
+                        </a>
+                    </th>
+                    <th>Khách hàng</th>
+                    <th style="width: 150px;">Ngày tạo
+                        <a href="javascript:void(0)" @onclick='() => SortBy("date")'>
+                            <i class="fas @(Filter.SortBy == "date" ? "fa-sort-down" : "fa-sort")"></i>
+                        </a>
+                    </th>
+                    <th style="width: 150px;" class="text-end">Tổng tiền
+                        <a href="javascript:void(0)" @onclick='() => SortBy("price")'>
+                            <i class="fas @(Filter.SortBy == "price" ? "fa-sort-down" : "fa-sort")"></i>
+                        </a>
+                    </th>
+                    <th style="width: 150px;">Trạng thái</th>
+                    <th style="width: 150px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in PagingResult.Items)
+                {
+                    <tr>
+                        <td>#@item.OrderId</td>
+                        <td>@item.CustomerName</td>
+                        <td>@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-end text-danger fw-bold">@item.TotalAmount.ToString("N0") ₫</td>
+                        <td>
+                            @if (item.Status == "completed")
+                            {
+                                <span class="badge bg-success">Đã thanh toán</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a href="/orders/details/@item.OrderId" class="btn btn-sm btn-info text-white">Xem</a>
+                                @if (item.Status == "pending")
+                                {
+                                    <a href="/orders/delete/@item.OrderId" class="btn btn-sm btn-outline-danger">Xóa</a>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-sm btn-secondary" disabled>Đã xong</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(PagingResult.Page == 1 ? "disabled" : "")">
+                    <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(PagingResult.Page - 1)">&laquo; Previous</a>
+                </li>
+
+                @for (int i = 1; i <= PagingResult.TotalPages; i++)
+                {
+                    <li class="page-item @(i == PagingResult.Page ? "active" : "")">
+                        <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(i)">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @(PagingResult.Page == PagingResult.TotalPages || PagingResult.TotalPages == 0 ? "disabled" : "")">
+                    <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(PagingResult.Page + 1)">Next &raquo;</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@code {
+    private PagedResult<OrderListDTO>? PagingResult;
+    private OrderFilterDTO Filter = new();
+    private bool IsLoading = true;
+
+    // Nhận thông báo từ các trang khác (Delete, Create)
+    [SupplyParameterFromQuery(Name = "success")]
+    public string? SuccessMessage { get; set; }
+
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo Filter từ Query String (nếu cần)
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        // ... (Logic đọc query string và gán vào Filter) ...
+        
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        IsLoading = true;
+        PagingResult = await OrdersService.GetOrdersAsync(Filter);
+        IsLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task ApplyFilter()
+    {
+        Filter.Page = 1; 
+        await LoadOrders();
+    }
+
+    private async Task ClearFilter()
+    {
+        Filter = new OrderFilterDTO { PageSize = Filter.PageSize }; 
+        await LoadOrders();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && (PagingResult == null || page <= PagingResult.TotalPages))
+        {
+            Filter.Page = page;
+            await LoadOrders();
+        }
+    }
+    
+    private async Task SortBy(string sortField)
+    {
+        Filter.SortBy = sortField;
+        Filter.Page = 1;
+        await LoadOrders();
+    }
+}

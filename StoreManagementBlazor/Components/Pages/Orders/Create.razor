@@ -1,0 +1,244 @@
+@page "/orders/create"
+@rendermode InteractiveServer
+
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject OrdersService OrdersService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Tạo đơn hàng mới</PageTitle>
+
+<div class="container-fluid mt-3">
+    <h2>Tạo đơn hàng mới</h2>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">@ErrorMessage</div>
+    }
+
+    @if (IsLoading)
+    {
+        <p>Đang tải dữ liệu...</p>
+    }
+    else
+    {
+
+    <!-- ================= KHÁCH HÀNG ================= -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <label class="form-label">Khách hàng</label>
+            <InputSelect class="form-select" @bind-Value="OrderData.CustomerId">
+                <option value="">-- Khách lẻ --</option>
+                @foreach (var c in Customers)
+                {
+                    <option value="@c.CustomerId">@c.Name - @c.Phone</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+
+    <!-- ================= PROMO ================= -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <label>Mã khuyến mãi</label>
+            <div class="input-group">
+                <InputText class="form-control" @bind-Value="PromoCodeInput" />
+                <button class="btn btn-secondary" @onclick="ApplyPromoCode">
+                    Áp dụng
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(PromoCodeMessage))
+            {
+                <small class="text-@(IsPromoCodeValid ? "success" : "danger")">
+                    @PromoCodeMessage
+                </small>
+            }
+        </div>
+    </div>
+
+    <!-- ================= SẢN PHẨM ================= -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label>Sản phẩm</label>
+                    <InputSelect class="form-select" @bind-Value="SelectedProductId">
+                        <option value="0">-- Chọn sản phẩm --</option>
+                        @foreach (var p in Products)
+                        {
+                            <option value="@p.ProductId">@p.DisplayText</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-3">
+                    <label>Số lượng</label>
+                    <InputNumber class="form-control" @bind-Value="SelectedQuantity" />
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="AddItemToCart">
+                        Thêm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= GIỎ HÀNG ================= -->
+    <div class="card mb-3">
+        <div class="card-body">
+            @if (!OrderData.CartItems.Any())
+            {
+                <p class="text-muted">Chưa có sản phẩm</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>SL</th>
+                            <th>Giá</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in OrderData.CartItems)
+                        {
+                            var p = Products.First(x => x.ProductId == i.ProductId);
+                            <tr>
+                                <td>@p.ProductName</td>
+                                <td>@i.Quantity</td>
+                                <td>@(p.Price * i.Quantity).ToString("N0") ₫</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger"
+                                            @onclick="() => RemoveItem(i)">
+                                        Xóa
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    <!-- ================= TỔNG TIỀN ================= -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>Tạm tính: <b>@RawTotal.ToString("N0") ₫</b></p>
+            <p>Giảm giá: <b>-@DiscountAmount.ToString("N0") ₫</b></p>
+            <h4>Thanh toán: @FinalTotal.ToString("N0") ₫</h4>
+        </div>
+    </div>
+
+    <!-- ================= SUBMIT ================= -->
+    <EditForm Model="OrderData" OnValidSubmit="HandleCreateOrder">
+        <DataAnnotationsValidator />
+        <button type="submit" class="btn btn-success w-100">
+            Tạo & Thanh toán
+        </button>
+    </EditForm>
+    }
+</div>
+
+@code {
+    private List<Customer> Customers = new();
+    private List<ProductSelectionDTO> Products = new();
+    private OrderCreationDTO OrderData = new();
+
+    private int SelectedProductId;
+    private int SelectedQuantity = 1;
+
+    private decimal RawTotal;
+    private decimal DiscountAmount;
+    private decimal FinalTotal => RawTotal - DiscountAmount;
+
+    private string PromoCodeInput = "";
+    private string? PromoCodeMessage;
+    private bool IsPromoCodeValid;
+
+    private string? ErrorMessage;
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        (Customers, Products) = await OrdersService.GetCustomerAndProductDataAsync();
+        OrderData.UserId = 1;
+        IsLoading = false;
+    }
+
+    private async Task AddItemToCart()
+    {
+        if (SelectedProductId == 0 || SelectedQuantity <= 0) return;
+
+        var item = OrderData.CartItems
+            .FirstOrDefault(x => x.ProductId == SelectedProductId);
+
+        if (item == null)
+        {
+            OrderData.CartItems.Add(new CartItemDTO
+            {
+                ProductId = SelectedProductId,
+                Quantity = SelectedQuantity
+            });
+        }
+        else
+        {
+            item.Quantity += SelectedQuantity;
+        }
+
+        SelectedProductId = 0;
+        SelectedQuantity = 1;
+
+        await RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private async Task RemoveItem(CartItemDTO item)
+    {
+        OrderData.CartItems.Remove(item);
+        await RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private async Task ApplyPromoCode()
+    {
+        OrderData.PromoCode = PromoCodeInput?.Trim();
+        await RecalculateTotals();
+        StateHasChanged();
+    }
+
+    private async Task RecalculateTotals()
+    {
+        var r = await OrdersService.CalculateCartTotalsAsync(
+            OrderData.CartItems,
+            OrderData.PromoCode
+        );
+
+        RawTotal = r.rawTotal;
+        DiscountAmount = r.discount;
+        PromoCodeMessage = r.message;
+        IsPromoCodeValid = r.isValid;
+    }
+
+    private async Task HandleCreateOrder()
+    {
+        if (!OrderData.CartItems.Any())
+        {
+            ErrorMessage = "Đơn hàng chưa có sản phẩm.";
+            return;
+        }
+
+        var (ok, msg, _) = await OrdersService.CreateOrderAsync(OrderData);
+
+        if (!ok)
+            ErrorMessage = msg;
+        else
+            NavigationManager.NavigateTo("/orders");
+    }
+}

@@ -1,0 +1,100 @@
+@page "/orders/delete/{OrderId:int}"
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject OrdersService OrdersService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Xóa đơn hàng #@OrderId</PageTitle>
+
+<div class="container-fluid mt-3" style="user-select:none;">
+    <h2>Xóa đơn hàng</h2>
+
+    @if (Order == null)
+    {
+        <p><em>Đang tải dữ liệu hoặc đơn hàng không tồn tại...</em></p>
+    }
+    else
+    {
+        <div class="alert alert-warning mt-3">
+            <strong>Bạn có chắc chắn muốn xóa đơn hàng này?</strong>
+            <br />
+            Hành động này không thể hoàn tác, nhưng tồn kho và lượt dùng khuyến mãi sẽ được hoàn trả.
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td style="width:30%"><strong>Mã đơn hàng</strong></td>
+                        <td>#@Order.OrderId</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Khách hàng</strong></td>
+                        <td>@Order.CustomerName</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tổng tiền</strong></td>
+                        <td class="text-danger fw-bold">
+                            @Order.TotalAmount.ToString("N0") ₫
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ngày tạo</strong></td>
+                        <td>@Order.OrderDate.ToString("yyyy-MM-dd HH:mm")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        @* Blazor thay thế <form asp-action="Delete" method="post"> bằng EditForm để gọi phương thức C# *@
+        <EditForm Model="Order" OnValidSubmit="HandleDelete">
+            <button type="submit" class="btn btn-outline-danger">
+                Xóa đơn hàng
+            </button>
+            <a href="/orders" class="btn btn-outline-secondary ms-2">
+                Hủy
+            </a>
+            
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mt-3">@ErrorMessage</div>
+            }
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private OrderDetailsDTO? Order; 
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Order = await OrdersService.GetOrderDetailsAsync(OrderId); 
+        if (Order == null)
+        {
+            NavigationManager.NavigateTo("/orders?error=Đơn hàng không tồn tại để xóa.");
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        ErrorMessage = null;
+        
+        // Gọi OrdersService.DeleteOrderAsync(OrderId)
+        var (success, message) = await OrdersService.DeleteOrderAsync(OrderId); 
+
+        if (success)
+        {
+            // Chuyển hướng về Index và truyền thông báo thành công qua query string
+            NavigationManager.NavigateTo($"/orders?success={Uri.EscapeDataString(message)}");
+        }
+        else
+        {
+            // Hiển thị lỗi
+            ErrorMessage = message;
+        }
+    }
+}

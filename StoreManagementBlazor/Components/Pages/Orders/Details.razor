@@ -1,0 +1,183 @@
+@page "/orders/details/{OrderId:int}"
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject OrdersService OrdersService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Chi tiết đơn hàng #@OrderId</PageTitle>
+
+<div class="container-fluid mt-3" style="user-select:none;">
+    @if (Order == null)
+    {
+        <p><em>Đang tải dữ liệu hoặc đơn hàng không tồn tại...</em></p>
+    }
+    else
+    {
+        <h2>Chi tiết đơn hàng #@OrderId</h2>
+
+        @* Thông báo *@
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div class="alert alert-success">@SuccessMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger">@ErrorMessage</div>
+        }
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-6">
+                                <p class="mb-1">
+                                    <strong>Ngày đặt hàng:</strong><br />
+                                    @Order.OrderDate.ToString("dd/MM/yyyy HH:mm")
+                                </p>
+
+                                <p class="mb-0">
+                                    <strong>Mã khuyến mãi:</strong><br />
+                                    @if (!string.IsNullOrEmpty(Order.PromoCode))
+                                    {
+                                        <span class="badge bg-success">@Order.PromoCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Không có</span>
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                                <p class="mb-1"><strong>Tổng tiền</strong></p>
+                                <h3 class="text-danger fw-bold">
+                                    @Order.TotalAmount.ToString("N0") ₫
+                                </h3>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <h5 class="mb-3">Trạng thái & Thanh toán</h5>
+
+                        @if (Order.Status == "completed")
+                        {
+                            <p class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> **Đã Thanh Toán**
+                                <br />
+                                Ngày thanh toán: @Order.Payment?.PaymentDate.ToString("dd/MM/yyyy HH:mm")
+                                <br />
+                                Phương thức: @Order.Payment?.PaymentMethod
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="alert alert-warning">
+                                <i class="fas fa-clock"></i> **Chưa Thanh Toán**
+                            </p>
+                            
+                            <div class="d-flex align-items-center gap-2">
+                                <InputSelect @bind-Value="PaymentMethod" class="form-select form-select-sm" style="width:150px;">
+                                    <option value="Cash">Tiền mặt</option>
+                                    <option value="Transfer">Chuyển khoản</option>
+                                </InputSelect>
+                                <button type="button" class="btn btn-success" @onclick="() => MarkAsPaid(PaymentMethod)">
+                                    <i class="fas fa-credit-card"></i> Thanh toán ngay
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-3">Sản phẩm trong đơn (@Order.Items.Count)</h5>
+
+                        @foreach (var item in Order.Items)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                <div>
+                                    <strong>@item.ProductName</strong><br />
+                                    <small class="text-muted">@item.Price.ToString("N0")₫ x @item.Quantity</small>
+                                </div>
+                                <strong class="text-danger">
+                                    @item.Subtotal.ToString("N0") ₫
+                                </strong>
+                            </div>
+                        }
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between">
+                            <strong>Tổng tiền (chưa KM)</strong>
+                            <span class="text-muted">@(Order.TotalAmount + Order.DiscountAmount).ToString("N0") ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-success">
+                            <strong>Giảm giá</strong>
+                            <span>- @Order.DiscountAmount.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between fs-5 mt-2">
+                            <strong>TỔNG CỘNG</strong>
+                            <strong class="text-danger fs-4">
+                                @Order.TotalAmount.ToString("N0") ₫
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="card-footer text-center bg-white">
+                        <a href="/orders" class="btn btn-outline-secondary">
+                            Quay lại danh sách
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private OrderDetailsDTO? Order;
+    private string PaymentMethod { get; set; } = "Cash";
+    private string? SuccessMessage;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrderDetails();
+    }
+    
+    private async Task LoadOrderDetails()
+    {
+        Order = await OrdersService.GetOrderDetailsAsync(OrderId);
+        if (Order == null)
+        {
+            // Chuyển hướng nếu không tìm thấy, tương tự NotFound() trong Controller
+            NavigationManager.NavigateTo("/orders?error=Đơn hàng không tồn tại.");
+        }
+    }
+
+    private async Task MarkAsPaid(string method)
+    {
+        SuccessMessage = null;
+        ErrorMessage = null;
+        
+        var (success, message) = await OrdersService.MarkOrderAsPaidAsync(OrderId, method);
+        
+        if (success)
+        {
+            SuccessMessage = message;
+            await LoadOrderDetails(); // Tải lại chi tiết để cập nhật trạng thái UI
+        }
+        else
+        {
+            ErrorMessage = message;
+        }
+    }
+}
