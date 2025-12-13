@@ -14,6 +14,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<InventoryService>();
+
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
