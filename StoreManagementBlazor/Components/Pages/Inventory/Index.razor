@@ -1,0 +1,196 @@
+﻿@page "/inventory"
+@using System.Globalization
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject InventoryService InventoryService
+@rendermode InteractiveServer
+
+<div class="container-fluid mt-3">
+    <h2>Quản lý tồn kho</h2>
+
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Tìm kiếm</label>
+            <input class="form-control" @bind="searchText" @oninput="OnSearchInput" placeholder="Tên sản phẩm..." autocomplete="off" />
+        </div>
+
+
+        <div class="col-md-2">
+            <label class="form-label">Số dòng / trang</label>
+            <select class="form-select" @onchange="OnPageSizeChanged">
+                <option value="5" selected="@(pageSize == 5)">5</option>
+                <option value="10" selected="@(pageSize == 10)">10</option>
+                <option value="25" selected="@(pageSize == 25)">25</option>
+                <option value="50" selected="@(pageSize == 50)">50</option>
+            </select>
+        </div>
+
+        <div class="col-auto ms-4">
+            <button class="btn btn-outline-primary" @onclick="ResetFilter">Đặt lại</button>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Tên sản phẩm</th>
+                    <th>Số lượng</th>
+                    <th>Cập nhật gần nhất</th>
+                    <th class="text-center">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (paginatedInventories == null || !paginatedInventories.Any())
+                {
+                    <tr><td colspan="5" class="text-center text-muted">@((hasFilter) ? "Không có dữ liệu phù hợp." : "Chưa có dữ liệu.")</td></tr>
+                }
+                else
+                {
+                    foreach (var it in paginatedInventories)
+                    {
+                        <tr>
+                            <td>@it.InventoryId</td>
+                            <td>@it.Product?.ProductName</td>
+                            <td>@it.Quantity?.ToString("N0", new CultureInfo("vi-VN"))</td>
+                            <td>@(it.UpdatedAt.ToString("HH:mm:ss dd/MM/yyyy") ?? "-")</td>
+                            <td class="text-center">
+                                <a class="btn btn-sm btn-outline-info" href="@($"/inventory/details/{it.InventoryId}")">Chi tiêt</a>
+                                <a class="btn btn-sm btn-outline-warning" href="@($"/inventory/edit/{it.InventoryId}")">Cập nhật</a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">&laquo; Prev</button>
+                </li>
+
+                @for (int p = 1; p <= totalPages; p++)
+                   
+                {
+                    int pageNumber = p;
+                    if (p == 1 || p == totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                    {
+                        <li class="page-item @(pageNumber == currentPage ? "active" : "")">
+                            <button type="button" class="page-link btn-link" @onclick="() => ChangePage(pageNumber)">@p</button>
+                        </li>
+                    }
+                    else if (p == 2 && currentPage > 4)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                    else if (p == totalPages - 1 && currentPage < totalPages - 3)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                }
+
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">Next &raquo;</button>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@code {
+    // dữ liệu
+    private List<Inventory> allInventories = new();
+    private List<Inventory> filteredInventories = new();
+    private List<Inventory> paginatedInventories = new();
+
+
+    // filter
+    private string searchText = "";
+
+    private bool hasFilter => !string.IsNullOrWhiteSpace(searchText);
+    // pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+
+    // debounce
+    private System.Timers.Timer? _debounceTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _debounceTimer = new System.Timers.Timer(450) { AutoReset = false };
+        _debounceTimer.Elapsed += async (s, e) => await InvokeAsync(() => { currentPage = 1; LoadData(); StateHasChanged(); });
+
+        await LoadFullData();
+    }
+
+    private async Task LoadFullData()
+    {
+        allInventories = await InventoryService.GetAll(); // cần phương thức trả List<Inventory>
+        LoadData();
+    }
+
+    private void LoadData()
+    {
+        var q = allInventories.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            q = q.Where(x=>x.Product!.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        filteredInventories = q.ToList();
+
+        totalPages = (int)Math.Ceiling((double)filteredInventories.Count / pageSize);
+        if (totalPages < 1) totalPages = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        paginatedInventories = filteredInventories
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        _debounceTimer?.Stop();
+        _debounceTimer?.Start();
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var s))
+        {
+            pageSize = s;
+            currentPage = 1;
+            LoadData();
+        }
+    }
+
+    private void ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        LoadData();
+    }
+
+    private void ResetFilter()
+    {
+        searchText = "";
+        pageSize = 10;
+        currentPage = 1;
+        LoadData();
+    }
+
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}

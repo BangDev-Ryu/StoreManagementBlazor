@@ -1,0 +1,97 @@
+﻿@page "/admin/products/edit/{id:int}"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5>✏️ Sửa sản phẩm</h5>
+    </div>
+
+    <div class="card-body">
+        @if (product == null)
+        {
+            <p>Đang tải...</p>
+        }
+        else
+        {
+            <EditForm Model="product" OnValidSubmit="Save">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label>Tên sản phẩm</label>
+                        <InputText class="form-control" @bind-Value="product.ProductName" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label>Mã vạch</label>
+                        <InputText class="form-control" @bind-Value="product.Barcode" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Giá</label>
+                        <InputNumber class="form-control" @bind-Value="product.Price" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Đơn vị</label>
+                        <InputText class="form-control" @bind-Value="product.Unit" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Danh mục</label>
+                        <InputSelect class="form-select" @bind-Value="product.CategoryId">
+                            <option value="">-- Chọn danh mục --</option>
+                            @foreach (var c in categories)
+                            {
+                                <option value="@c.CategoryId">@c.CategoryName</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label>Nhà cung cấp</label>
+                        <InputSelect class="form-select" @bind-Value="product.SupplierId">
+                            <option value="">-- Chọn NCC --</option>
+                            @foreach (var s in suppliers)
+                            {
+                                <option value="@s.SupplierId">@s.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <button class="btn btn-primary">Cập nhật</button>
+                    <button type="button"
+                            class="btn btn-secondary ms-2"
+                            @onclick="@(() => Nav.NavigateTo("/admin/products"))">
+                        Quay lại
+                    </button>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Product? product;
+    List<Category> categories = new();
+    List<Supplier> suppliers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        suppliers = await ProductService.GetSuppliersAsync();
+        product = await ProductService.GetByIdAsync(id);
+    }
+
+    async Task Save()
+    {
+        await ProductService.UpdateAsync(product!);
+        Nav.NavigateTo("/admin/products");
+    }
+}

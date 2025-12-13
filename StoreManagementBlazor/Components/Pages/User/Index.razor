@@ -1,0 +1,103 @@
+@page "/users"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService ToastService
+@rendermode InteractiveServer
+
+<PageTitle>Quản lý người dùng</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Danh sách người dùng</h3>
+    <a href="/users/create" class="btn btn-primary">Thêm mới</a>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" placeholder="Tìm theo tên/username..." 
+            @bind="keyword" 
+            @bind:event="oninput" 
+            @bind:after="LoadUsers" />   
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" @bind="roleFilter" @bind:after="LoadUsers">
+            <option value="all">-- Tất cả vai trò --</option>
+            <option value="admin">Admin</option>
+            <option value="staff">Staff</option>
+            <option value="customer">Customer</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-secondary" @onclick="LoadUsers">Tìm kiếm</button>
+    </div>
+</div>
+
+@if (users == null)
+{
+    <p><em>Đang tải...</em></p>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Họ tên</th>
+                <th>Vai trò</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Username</td>
+                    <td>@user.FullName</td>
+                    <td>
+                        @if(user.Role == "admin") { <span class="badge bg-danger">Admin</span> }
+                        else if(user.Role == "staff") { <span class="badge bg-primary">Staff</span> }
+                        else { <span class="badge bg-secondary">Customer</span> }
+                    </td>
+                    <td>@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        <a href="/users/edit/@user.UserId" class="btn btn-sm btn-warning">Sửa</a>
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(user.UserId)">Xóa</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<User>? users;
+    private string keyword = "";
+    private string roleFilter = "all";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await UserService.GetUsersAsync(keyword, roleFilter);
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        if (!await Task.FromResult(true)) return; 
+        var result = await UserService.DeleteUserAsync(id);
+        if (result.success)
+        {
+            ToastService.ShowSuccess(result.message);
+            await LoadUsers();
+        }
+        else
+        {
+            ToastService.ShowError(result.message);
+        }
+    }
+}
