@@ -1,9 +1,15 @@
 ﻿@page "/promotions/edit/{id:int}"
+@using System.Globalization
+@using Microsoft.EntityFrameworkCore
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject PromotionService PromotionService
 @inject NavigationManager Navigation
+@inject ApplicationDbContext _context;
+@inject Blazored.Toast.Services.IToastService toastService
 @rendermode InteractiveServer
+
+<PageTitle>Promotion Edit</PageTitle>
 
 <div class="container-fluid mt-4" style="user-select: none;">
     <h1 class="mt-4">Sửa khuyến mãi</h1>
@@ -38,13 +44,13 @@
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Mã khuyến mãi (Không được sửa)</label>
                             <InputText @bind-Value="promotion.PromoCode" class="form-control" readonly style="background-color: #e9ecef;" />
-                            <ValidationMessage For="() => promotion.PromoCode" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.PromoCode" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Mô tả</label>
                             <InputText @bind-Value="promotion.Description" class="form-control" placeholder="Mô tả ngắn gọn..." />
-                            <ValidationMessage For="() => promotion.Description" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.Description" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-6">
@@ -53,40 +59,55 @@
                                 <option value="percent">Phần trăm (%)</option>
                                 <option value="fixed">Số tiền</option>
                             </InputSelect>
-                            <ValidationMessage For="() => promotion.DiscountType" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.DiscountType" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Giá trị giảm</label>
-                            <InputNumber @bind-Value="promotion.DiscountValue"
-                                         class="form-control"
-                                         min="0"
-                                         placeholder="@(promotion.DiscountType == "percent" ? "VD: 10 (%)" : "VD: 10000")" />
-                            <ValidationMessage For="() => promotion.DiscountValue" class="text-danger small" />
+                            @if (promotion.DiscountType == "percent")
+                            {
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="promotion.DiscountValue"
+                                    class="form-control"
+                                    min="0" max="100"
+                                    placeholder="VD: 10 (%)" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="promotion.DiscountValue"
+                                    class="form-control"
+                                    min="0"
+                                    step="1000"
+                                    placeholder="VD: 10000" />
+                                </div>
+                            }
+                            <ValidationMessage For="() => promotion.DiscountValue" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Giá trị tối thiểu đơn hàng</label>
                             <InputNumber @bind-Value="promotion.MinOrderAmount" class="form-control" min="0" step="1000" />
-                            <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.MinOrderAmount" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Ngày bắt đầu</label>
                             <InputDate @bind-Value="promotion.StartDate" class="form-control" />
-                            <ValidationMessage For="() => promotion.StartDate" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.StartDate" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label fw-semibold">Ngày kết thúc</label>
                             <InputDate @bind-Value="promotion.EndDate" class="form-control" />
-                            <ValidationMessage For="() => promotion.EndDate" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.EndDate" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Số lần sử dụng (0 = không giới hạn)</label>
                             <InputNumber @bind-Value="promotion.UsageLimit" class="form-control" min="0" />
-                            <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.UsageLimit" class="text-danger small mt-2" />
                         </div>
 
                         <div class="col-md-4">
@@ -95,7 +116,7 @@
                                 <option value="active">Đang hoạt động</option>
                                 <option value="inactive">Ngưng hoạt động</option>
                             </InputSelect>
-                            <ValidationMessage For="() => promotion.Status" class="text-danger small" />
+                            <ValidationMessage For="() => promotion.Status" class="text-danger small mt-2" />
                         </div>
                     </div>
 
@@ -110,28 +131,24 @@
 </div>
 
 @code {
-    // 1. Nhận tham số ID từ URL (/promotions/edit/{id})
+    // Nhận tham số ID từ URL (/promotions/edit/{Id})
     [Parameter]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     private Promotion? promotion;
 
-    // 2. Chạy khi trang vừa mở: Lấy dữ liệu cũ lên
+    // Chạy khi trang vừa mở: Lấy dữ liệu cũ lên
     protected override async Task OnInitializedAsync()
     {
-        // Giả lập độ trễ mạng xíu để thấy hiệu ứng loading (tuỳ chọn)
-        // await Task.Delay(500);
+        promotion = await _context.Promotions.AsNoTracking()
+                              .FirstOrDefaultAsync(p => p.PromoId == Id);
 
-        promotion = await PromotionService.GetPromotionById(id);
-
-        // Nếu ID sai hoặc không tìm thấy, đá về trang danh sách ngay
         if (promotion == null)
         {
             Navigation.NavigateTo("/promotions");
         }
     }
 
-    // 3. Logic thay thế JavaScript cũ: Reset giá trị khi đổi loại giảm giá
     private void OnDiscountTypeChanged()
     {
         if (promotion != null)
@@ -140,12 +157,20 @@
         }
     }
 
-    // 4. Xử lý nút Lưu
     private async Task HandleSubmit()
     {
         if (promotion != null)
         {
-            await PromotionService.UpdatePromotion(promotion);
+            var result = await PromotionService.UpdatePromotion(promotion);
+
+            if (!result.success)
+            {
+                toastService.ShowError(result.message);
+                return;
+            }
+
+            toastService.ShowSuccess(result.message);
+            await Task.Delay(1000);
             Navigation.NavigateTo("/promotions");
         }
     }

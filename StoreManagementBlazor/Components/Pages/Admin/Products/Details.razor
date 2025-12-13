@@ -1,0 +1,78 @@
+﻿@page "/admin/products/details/{id:int}"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5>👁 Chi tiết sản phẩm</h5>
+    </div>
+
+    <div class="card-body">
+        @if (product == null)
+        {
+            <p>Đang tải...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-4">Tên</dt>
+                <dd class="col-sm-8">@product.ProductName</dd>
+
+                <dt class="col-sm-4">Mã vạch</dt>
+                <dd class="col-sm-8">@product.Barcode</dd>
+
+                <dt class="col-sm-4">Giá</dt>
+                <dd class="col-sm-8">@product.Price.ToString("N0") đ</dd>
+
+                <dt class="col-sm-4">Đơn vị</dt>
+                <dd class="col-sm-8">@product.Unit</dd>
+
+                <dt class="col-sm-4">Danh mục</dt>
+                <dd class="col-sm-8">@GetCategoryName(product.CategoryId)</dd>
+
+                <dt class="col-sm-4">Nhà cung cấp</dt>
+                <dd class="col-sm-8">@GetSupplierName(product.SupplierId)</dd>
+
+                <dt class="col-sm-4">Ngày tạo</dt>
+                <dd class="col-sm-8">@product.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+            </dl>
+
+            <div class="text-end">
+                <button class="btn btn-secondary"
+                        @onclick="@(() => Nav.NavigateTo("/admin/products"))">
+                    Quay lại
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Product? product;
+
+    Dictionary<int, string> categoryMap = new();
+    Dictionary<int, string> supplierMap = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await ProductService.GetByIdAsync(id);
+
+        var categories = await ProductService.GetCategoriesAsync();
+        categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
+
+        var suppliers = await ProductService.GetSuppliersAsync();
+        supplierMap = suppliers.ToDictionary(x => x.SupplierId, x => x.Name);
+    }
+
+    string GetCategoryName(int? id)
+        => id.HasValue && categoryMap.ContainsKey(id.Value)
+            ? categoryMap[id.Value]
+            : "";
+
+    string GetSupplierName(int? id)
+        => id.HasValue && supplierMap.ContainsKey(id.Value)
+            ? supplierMap[id.Value]
+            : "";
+}

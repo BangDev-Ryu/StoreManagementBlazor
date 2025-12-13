@@ -1,0 +1,154 @@
+﻿@page "/admin/products"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📦 Danh sách sản phẩm</h5>
+        <button class="btn btn-primary"
+                @onclick="@(() => Nav.NavigateTo("/admin/products/create"))">
+            ➕ Thêm sản phẩm
+        </button>
+    </div>
+
+    <div class="card-body">
+        <!-- SEARCH -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input class="form-control"
+                       placeholder="🔍 Tìm theo tên / mã vạch"
+                       @bind="search"
+                       @bind:event="oninput" />
+            </div>
+            <div class="col-md-3">
+                <input type="number"
+                       class="form-control"
+                       placeholder="Giá từ"
+                       @bind="minPrice"
+                       @bind:event="oninput" />
+            </div>
+            <div class="col-md-3">
+                <input type="number"
+                       class="form-control"
+                       placeholder="Giá đến"
+                       @bind="maxPrice"
+                       @bind:event="oninput" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100"
+                        @onclick="ClearFilter">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Tên</th>
+                    <th>Mã vạch</th>
+                    <th>Giá</th>
+                    <th>Đơn vị</th>
+                    <th>Danh mục</th>
+                    <th>NCC</th>
+                    <th class="text-center">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (filtered.Any())
+                {
+                    int i = 1;
+                    @foreach (var p in filtered)
+                    {
+                        <tr>
+                            <td>@i</td>
+                            <td>@p.ProductName</td>
+                            <td>@p.Barcode</td>
+                            <td>@p.Price.ToString("N0") đ</td>
+                            <td>@p.Unit</td>
+                            <td>@GetCategoryName(p.CategoryId)</td>
+                            <td>@GetSupplierName(p.SupplierId)</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning me-1"
+                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/edit/{p.ProductId}"))">
+                                    Sửa
+                                </button>
+                                <button class="btn btn-sm btn-outline-info me-1"
+                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/details/{p.ProductId}"))">
+                                    Xem
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/delete/{p.ProductId}"))">
+                                    Xóa
+                                </button>
+                            </td>
+                        </tr>
+                        i++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            Không có dữ liệu
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    List<Product> products = new();
+    List<Product> filtered = new();
+
+    Dictionary<int, string> categoryMap = new();
+    Dictionary<int, string> supplierMap = new();
+
+    string search = "";
+    decimal? minPrice, maxPrice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await ProductService.GetAllAsync();
+
+        var categories = await ProductService.GetCategoriesAsync();
+        categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
+
+        var suppliers = await ProductService.GetSuppliersAsync();
+        supplierMap = suppliers.ToDictionary(x => x.SupplierId, x => x.Name);
+
+        Apply();
+    }
+
+    void Apply()
+    {
+        filtered = products.Where(p =>
+            (string.IsNullOrWhiteSpace(search)
+                || p.ProductName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Barcode != null && p.Barcode.Contains(search))) &&
+            (!minPrice.HasValue || p.Price >= minPrice) &&
+            (!maxPrice.HasValue || p.Price <= maxPrice)
+        ).ToList();
+    }
+
+    void ClearFilter()
+    {
+        search = "";
+        minPrice = maxPrice = null;
+        Apply();
+    }
+
+    string GetCategoryName(int? id)
+        => id.HasValue && categoryMap.ContainsKey(id.Value)
+            ? categoryMap[id.Value]
+            : "";
+
+    string GetSupplierName(int? id)
+        => id.HasValue && supplierMap.ContainsKey(id.Value)
+            ? supplierMap[id.Value]
+            : "";
+}

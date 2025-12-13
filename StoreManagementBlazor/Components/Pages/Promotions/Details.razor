@@ -51,7 +51,7 @@
                     <div class="col-md-6 mb-3">
                         <label class="fw-bold">Giá trị giảm:</label>
                         <div>
-                            @(promotion.DiscountValue.ToString("N0", new CultureInfo("vi-VN")))
+                            @(promotion.DiscountValue?.ToString("N0", new CultureInfo("vi-VN")))
                             @(promotion.DiscountType == "percent" ? "%" : "đ")
                         </div>
                     </div>
@@ -109,14 +109,14 @@
 
 @code {
     [Parameter]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     private Promotion? promotion;
 
     protected override async Task OnInitializedAsync()
     {
         // 1. Gọi Service lấy dữ liệu theo ID
-        promotion = await PromotionService.GetPromotionById(id);
+        promotion = await PromotionService.GetPromotionById(Id);
 
         // 2. Nếu ID không tồn tại, chuyển hướng về trang danh sách
         if (promotion == null)

@@ -1,0 +1,87 @@
+@page "/users/edit/{id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject UserService UserService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService ToastService
+@rendermode InteractiveServer
+
+<h3>Cập nhật người dùng</h3>
+
+@if (user == null)
+{
+    <p><em>Đang tải dữ liệu...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <EditForm Model="user" OnValidSubmit="HandleUpdate" FormName="EditUserForm">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input type="text" class="form-control" value="@user.Username" disabled readonly />
+                    <small class="text-muted">Không thể thay đổi tên đăng nhập</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Họ và tên</label>
+                    <InputText class="form-control" @bind-Value="user.FullName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Mật khẩu mới</label>
+                    <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Để trống nếu không đổi mật khẩu" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Vai trò</label>
+                    <InputSelect class="form-select" @bind-Value="user.Role">
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                        <option value="customer">Customer</option>
+                    </InputSelect>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Cập nhật</button>
+                <a href="/users" class="btn btn-secondary">Quay lại</a>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private User? user;
+    
+    private string? newPassword { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await UserService.GetUserByIdAsync(Id);
+        if (user == null)
+        {
+            ToastService.ShowError("Không tìm thấy người dùng");
+            Navigation.NavigateTo("/users");
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (user == null) return;
+
+        var result = await UserService.UpdateUserAsync(user, newPassword);
+        if (result.success)
+        {
+            ToastService.ShowSuccess(result.message);
+            Navigation.NavigateTo("/users");
+        }
+        else
+        {
+            ToastService.ShowError(result.message);
+        }
+    }
+}

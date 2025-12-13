@@ -3,6 +3,7 @@
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject PromotionService PromotionService
+
 @rendermode InteractiveServer
 
 <PageTitle>Promotions</PageTitle>
@@ -40,8 +41,10 @@
         </div>
 
         <div class="col-auto">
-            <button class="btn btn-primary" @onclick="LoadData">Lọc</button>
-            <button class="btn btn-outline-secondary" @onclick="ResetFilter">Đặt lại</button>
+            <button class="btn btn-primary"
+                    @onclick="LoadData">Lọc</button>
+            <button class="btn btn-outline-secondary" 
+                    @onclick="ResetFilter">Đặt lại</button>
         </div>
     </div>
 
@@ -62,17 +65,17 @@
                 </tr>
             </thead>
             <tbody>
-                @if (paginatedPromotions == null || !paginatedPromotions.Any())
+                @if (allPromotions == null || !allPromotions.Any())
                 {
                     <tr>
                         <td colspan="6" class="text-center text-muted">
-                            @(hasFilter ? "Không có khuyến mãi phù hợp với bộ lọc." : "Chưa có dữ liệu khuyến mãi.")
+                            @(hasFilter ? "Không có khuyến mãi phù hợp." : "Đang cập nhật dữ liệu khuyến mãi.")
                         </td>
                     </tr>
                 }
                 else
                 {
-                    foreach (var p in paginatedPromotions)
+                    foreach (var p in allPromotions)
                     {
                         <tr>
                             <td>@p.PromoCode</td>
@@ -80,7 +83,7 @@
                             <td>
                                 @if (p.DiscountType == "fixed")
                                 {
-                                    @p.DiscountValue.ToString("N0", new CultureInfo("vi-VN"))
+                                    @p.DiscountValue?.ToString("N0", new CultureInfo("vi-VN"))
                                 }
                                 else
                                 {
@@ -105,176 +108,150 @@
         </table>
     </div>
 
-    @if (totalPages > 1)
-    {
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                    <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">&laquo; Prev</button>
-                </li>
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
 
-                @for (int p = 1; p <= totalPages; p++)
+            <!-- Prev -->
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                <button type="button" class="page-link"
+                        style="outline:none !important; box-shadow:none !important;"
+                        @onclick="() => ChangePage(currentPage - 1)"
+                        disabled="@(currentPage <= 1)">
+                    &laquo; Prev
+                </button>
+            </li>
+
+            @{
+                for (int i = 1; i <= totalPages; i++)
                 {
-                    if (p == 1 || p == totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                    int pageNumber = i; 
+
+                    if (pageNumber == 1 || pageNumber == totalPages ||
+                    (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2))
                     {
-                        <li class="page-item @(p == currentPage ? "active" : "")">
-                            <button class="page-link" @onclick="() => ChangePage(p)">@p</button>
+                        <li class="page-item @(pageNumber == currentPage ? "active" : "")">
+                            <button type="button" class="page-link"
+                                    style="outline:none !important; box-shadow:none !important;"
+                                    @onclick="() => ChangePage(pageNumber)">
+                                @pageNumber
+                            </button>
                         </li>
                     }
-                    else if (p == 2 && currentPage > 4)
+                    else if (pageNumber == currentPage - 3 && currentPage > 4)
                     {
                         <li class="page-item disabled"><span class="page-link">...</span></li>
                     }
-                    else if (p == totalPages - 1 && currentPage < totalPages - 3)
+                    else if (pageNumber == currentPage + 3 && currentPage < totalPages - 3)
                     {
                         <li class="page-item disabled"><span class="page-link">...</span></li>
                     }
                 }
+            }
 
-                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                    <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">Next &raquo;</button>
-                </li>
-            </ul>
-        </nav>
-    }
+            <!-- Next -->
+            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                <button type="button" class="page-link"
+                        style="outline:none !important; box-shadow:none !important;"
+                        @onclick="() => ChangePage(currentPage + 1)"
+                        disabled="@(currentPage >= totalPages)">
+                    Next &raquo;
+                </button>
+            </li>
+
+        </ul>
+    </nav>
 </div>
 
 @code {
-    // === Khai báo biến trạng thái ===
-    private List<Promotion> allPromotions = new(); // Dữ liệu gốc
-    private List<Promotion> filteredPromotions = new(); // Dữ liệu sau khi lọc
-    private List<Promotion> paginatedPromotions = new(); // Dữ liệu hiển thị trên trang hiện tại
+    private List<Promotion> allPromotions = new(); 
 
-    // Các biến Filter
     private string searchText = "";
     private DateTime? startDate;
     private DateTime? endDate;
-    private bool hasFilter => !string.IsNullOrEmpty(searchText) || startDate.HasValue || endDate.HasValue;
+    private bool hasFilter =>
+        !string.IsNullOrWhiteSpace(searchText) || startDate.HasValue || endDate.HasValue;
 
-    // Các biến Pagination
     private int currentPage = 1;
     private int pageSize = 5;
     private int totalPages = 1;
+    private int totalCount = 0;
+   
 
     // Timer để Debounce (chờ người dùng gõ xong mới tìm)
     private System.Timers.Timer? _debounceTimer;
 
-    // === 2. Lifecycle ===
     protected override async Task OnInitializedAsync()
     {
-        // Khởi tạo timer debounce (500ms)
+        // Khởi tạo timer debounce (0,5s)
         _debounceTimer = new System.Timers.Timer(500);
         _debounceTimer.AutoReset = false;
         _debounceTimer.Elapsed += async (sender, e) =>
         {
-            await InvokeAsync(() => { LoadData(); StateHasChanged(); });
+            await InvokeAsync(async () => 
+            { 
+                currentPage = 1; 
+                await LoadData(); 
+                StateHasChanged(); 
+            });
         };
 
-        // Lấy toàn bộ dữ liệu lần đầu
-        await LoadFullData();
+        // Load dữ liệu lần đầu 
+        await LoadData();
     }
 
-    // === 3. Các hàm xử lý Logic ===
-
-    private async Task LoadFullData()
+    private async Task LoadData()
     {
-        // Lưu ý: Nếu dữ liệu quá lớn, bạn nên chuyển logic lọc/phân trang xuống Service/DB (SQL)
-        // Ở đây mình giả định làm việc với list trong bộ nhớ như code mẫu MVC cũ
-        allPromotions = await PromotionService.GetAll();
-        LoadData(); // Gọi hàm lọc và chia trang
-    }
+        var result = await PromotionService.GetAll(
+         searchText: searchText,
+         startDate: startDate,
+         endDate: endDate,
+         page: currentPage,
+         pageSize: pageSize
+     );
 
-    private void LoadData()
-    {
-        // a. Lọc dữ liệu (Filter)
-        var query = allPromotions.AsQueryable();
+        allPromotions = result.Promotions;
+        totalCount = result.TotalCount;
 
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            query = query.Where(p => p.PromoCode.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (startDate.HasValue)
-        {
-            // Ép kiểu DateOnly nếu model dùng DateOnly, hoặc DateTime tùy model của bạn
-            var start = DateOnly.FromDateTime(startDate.Value);
-            query = query.Where(p => p.StartDate >= start);
-        }
-
-        if (endDate.HasValue)
-        {
-            var end = DateOnly.FromDateTime(endDate.Value);
-            // Validate ngày ở UI hoặc Logic
-            if (startDate.HasValue && startDate > endDate)
-            {
-                // Có thể hiện thông báo lỗi ở đây
-            }
-            query = query.Where(p => p.EndDate <= end);
-        }
-
-        filteredPromotions = query.ToList();
-
-        // b. Tính toán phân trang
-        totalPages = (int)Math.Ceiling((double)filteredPromotions.Count / pageSize);
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
         if (totalPages < 1) totalPages = 1;
         if (currentPage > totalPages) currentPage = totalPages;
-
-        // c. Cắt dữ liệu (Pagination)
-        paginatedPromotions = filteredPromotions
-            .Skip((currentPage - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
     }
 
-    // === 4. Xử lý sự kiện (Event Handlers) ===
-
-    // Xử lý khi gõ phím tìm kiếm (Debounce)
     private void OnSearchInput(ChangeEventArgs e)
     {
         searchText = e.Value?.ToString() ?? "";
-        // Reset timer, chờ 500ms sau khi ngừng gõ mới chạy lọc
+        // Reset timer, chờ 500ms sau khi ngừng gõ mới chạy 
         _debounceTimer?.Stop();
         _debounceTimer?.Start();
     }
 
     // Xử lý khi đổi số dòng/trang
-    private void OnPageSizeChanged(ChangeEventArgs e)
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out int newSize))
         {
             pageSize = newSize;
-            currentPage = 1; // Reset về trang 1
-            LoadData();
+            currentPage = 1;
+            await LoadData();
         }
     }
 
     // Xử lý chuyển trang
-    private void ChangePage(int page)
+    private async Task ChangePage(int page)
     {
         if (page < 1 || page > totalPages) return;
         currentPage = page;
-        LoadData();
+        await LoadData();
     }
 
     // Nút Reset
-    private void ResetFilter()
+    private async Task ResetFilter()
     {
         searchText = "";
         startDate = null;
         endDate = null;
         pageSize = 5;
         currentPage = 1;
-        LoadData();
-    }
-
-    // Nút Xóa
-    private async Task DeletePromo(int id)
-    {
-        // Trong thực tế nên dùng JS Interop để hiện confirm dialog
-        // bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bạn có chắc muốn xóa?");
-        // if (confirmed) ...
-
-        await PromotionService.DeletePromotion(id);
-        await LoadFullData(); // Load lại dữ liệu gốc
+        await LoadData();
     }
 }
