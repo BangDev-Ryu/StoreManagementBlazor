@@ -1,87 +1,128 @@
-@page "/users/edit/{id:int}"
-@using StoreManagementBlazor.Models
+@page "/users/edit/{Id:int}"
+@rendermode InteractiveServer
+@using StoreManagementBlazor.Models.ViewModels
 @using StoreManagementBlazor.Services
 @inject UserService UserService
-@inject NavigationManager Navigation
-@inject Blazored.Toast.Services.IToastService ToastService
-@rendermode InteractiveServer
+@inject NavigationManager NavManager
 
-<h3>Cập nhật người dùng</h3>
+<div class="container mt-4">
+    <h3>Cập nhật tài khoản</h3>
 
-@if (user == null)
-{
-    <p><em>Đang tải dữ liệu...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-6">
-            <EditForm Model="user" OnValidSubmit="HandleUpdate" FormName="EditUserForm">
-                <DataAnnotationsValidator />
-                
-                <div class="mb-3">
-                    <label class="form-label">Tên đăng nhập</label>
-                    <input type="text" class="form-control" value="@user.Username" disabled readonly />
-                    <small class="text-muted">Không thể thay đổi tên đăng nhập</small>
-                </div>
+    @if (Model == null)
+    {
+        <p class="text-center text-muted">Đang tải dữ liệu...</p>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger">@ErrorMessage</div>
+                }
 
-                <div class="mb-3">
-                    <label class="form-label">Họ và tên</label>
-                    <InputText class="form-control" @bind-Value="user.FullName" />
-                </div>
+                <EditForm Model="Model" OnValidSubmit="HandleUpdate">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tên đăng nhập</label>
+                            <input type="text" class="form-control bg-light" value="@Model.Username" readonly />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
+                            <InputText type="password" class="form-control" @bind-Value="Model.Password" placeholder="******" />
+                        </div>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Mật khẩu mới</label>
-                    <InputText type="password" class="form-control" @bind-Value="newPassword" placeholder="Để trống nếu không đổi mật khẩu" />
-                </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Họ và tên (*)</label>
+                            <InputText class="form-control" @bind-Value="Model.FullName" />
+                            <ValidationMessage For="() => Model.FullName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vai trò</label>
+                            <InputSelect class="form-select" @bind-Value="Model.Role">
+                                <option value="staff">Nhân viên (Staff)</option>
+                                <option value="admin">Quản trị viên (Admin)</option>
+                                <option value="customer">Khách hàng (Customer)</option>
+                            </InputSelect>
+                        </div>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Vai trò</label>
-                    <InputSelect class="form-select" @bind-Value="user.Role">
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                        <option value="customer">Customer</option>
-                    </InputSelect>
-                </div>
+                    @if (Model.Role == "customer")
+                    {
+                        <div class="card bg-light mt-3 mb-3 border-primary">
+                            <div class="card-header text-primary fw-bold bg-transparent border-0 pb-0">
+                                <i class="bi bi-info-circle"></i> Thông tin khách hàng (Bắt buộc)
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Số điện thoại (*)</label>
+                                        <InputText class="form-control" @bind-Value="Model.Phone" placeholder="09xxxxxxxxx" />
+                                        <ValidationMessage For="() => Model.Phone" class="text-danger small" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Email (*)</label>
+                                        <InputText class="form-control" @bind-Value="Model.Email" placeholder="example@gmail.com" />
+                                        <ValidationMessage For="() => Model.Email" class="text-danger small" />
+                                    </div>
+                                </div>
 
-                <button type="submit" class="btn btn-primary">Cập nhật</button>
-                <a href="/users" class="btn btn-secondary">Quay lại</a>
-            </EditForm>
+                                <div class="mb-3">
+                                    <label class="form-label">Địa chỉ (*)</label>
+                                    <InputTextArea class="form-control" @bind-Value="Model.Address" rows="2" />
+                                    <ValidationMessage For="() => Model.Address" class="text-danger small" />
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Cập nhật
+                        </button>
+                        <a href="/users" class="btn btn-secondary">Quay lại</a>
+                    </div>
+                </EditForm>
+            </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
-
-    private User? user;
-    
-    private string? newPassword { get; set; }
+    [Parameter] public int Id { get; set; }
+    private UserAdminViewModel? Model;
+    private string? ErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        user = await UserService.GetUserByIdAsync(Id);
-        if (user == null)
+        // Lấy dữ liệu user để fill vào form
+        Model = await UserService.GetUserForEditAsync(Id);
+        
+        if (Model == null)
         {
-            ToastService.ShowError("Không tìm thấy người dùng");
-            Navigation.NavigateTo("/users");
+            NavManager.NavigateTo("/users");
         }
     }
 
     private async Task HandleUpdate()
     {
-        if (user == null) return;
-
-        var result = await UserService.UpdateUserAsync(user, newPassword);
+        if (Model == null) return;
+        
+        // Khi submit, hệ thống sẽ tự động gọi hàm Validate() trong UserAdminViewModel
+        // Nếu Role="customer" mà thiếu thông tin hoặc sai định dạng -> Sẽ chặn lại và hiện lỗi.
+        
+        var result = await UserService.UpdateUserAsync(Model);
         if (result.success)
         {
-            ToastService.ShowSuccess(result.message);
-            Navigation.NavigateTo("/users");
+            NavManager.NavigateTo("/users");
         }
         else
         {
-            ToastService.ShowError(result.message);
+            ErrorMessage = result.message;
         }
     }
 }

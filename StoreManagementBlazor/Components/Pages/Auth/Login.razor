@@ -1,65 +1,49 @@
 ﻿@page "/login"
-@using Microsoft.AspNetCore.Authorization
 @using StoreManagementBlazor.ViewModels
-@inject StoreManagementBlazor.Services.AuthService AuthService
-@inject NavigationManager Nav
+@inject NavigationManager NavigationManager
 
-<PageTitle>Đăng nhập</PageTitle>
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card">
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4>Đăng nhập hệ thống</h4>
+            </div>
             <div class="card-body">
-                <h3 class="mb-3">Đăng nhập</h3>
-                <EditForm Model="model" OnValidSubmit="HandleLogin" FormName="LoginForm">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
+                @if (ShowError)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        Tên đăng nhập hoặc mật khẩu không đúng.
+                    </div>
+                }
+
+                <form action="/login-handler" method="post">
+                    <AntiforgeryToken />
+
                     <div class="mb-3">
                         <label class="form-label">Tên đăng nhập</label>
-                             <InputText class="form-control" @bind-Value="model.Username" @bind-Value:event="oninput" />
+                        <input type="text" name="Username" class="form-control" required />
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Mật khẩu</label>
-                             <InputText type="password" class="form-control" @bind-Value="model.Password" @bind-Value:event="oninput" />
+                        <input type="password" name="Password" class="form-control" required />
                     </div>
-                    <button type="submit"
-                            class="btn btn-primary w-100">
-                        Đăng nhập
-                    </button>
-                </EditForm>
-                @if (!string.IsNullOrEmpty(error))
-                {
-                    <div class="text-danger mt-3">@error</div>
-                }
-            <div class="alert alert-secondary mt-3">
-                <b>DEBUG</b>: Username: <code>@model.Username</code> | Password: <code>@model.Password</code>
-            </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="RememberMe" class="form-check-input" value="true" />
+                        <label class="form-check-label">Ghi nhớ đăng nhập</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
 @code {
-    [SupplyParameterFromForm]
-    private LoginViewModel model { get; set; } = new();
-    private string? error;
-    private async Task HandleLogin()
-    {
-        error = null;
-        try
-        {
-            var result = await AuthService.LoginAsync(model);
-            if (result)
-            {
-                Console.WriteLine("Login successful" + result);
-                Nav.NavigateTo("/");
-            }
-            else
-            {
-                error = "Tên đăng nhập hoặc mật khẩu không đúng";
-            }
-        }
-        catch
-        {
-            error = "Tên đăng nhập hoặc mật khẩu không đúng";
-        }
-    }
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? ErrorCode { get; set; }
+
+    private bool ShowError => ErrorCode == "InvalidCredentials";
 }
