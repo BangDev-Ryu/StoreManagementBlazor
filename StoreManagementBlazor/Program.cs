@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
-using StoreManagementBlazor.Models;
+using StoreManagementBlazor.Models;  // <-- Thêm nếu cần reference DbContext ở đây (thường không cần)
 using StoreManagementBlazor.Services;
 using System.Security.Claims;
 
@@ -39,9 +39,14 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<OrdersService>(); // <-- Đã thêm
+builder.Services.AddScoped<PaymentsService>(); // <-- Đã thêm
 
 builder.Services.AddBlazoredToast();
+builder.Services.AddScoped<InventoryService>();
+
 
 // ================= BLAZOR =================
 builder.Services.AddRazorComponents()
@@ -57,11 +62,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

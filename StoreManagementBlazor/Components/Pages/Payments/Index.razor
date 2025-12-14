@@ -1,0 +1,169 @@
+@page "/payments"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject PaymentsService PaymentsService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Quản lý thanh toán</PageTitle>
+
+<div class="container-fluid mt-3" style="user-select:none;">
+    <h2>Quản lý thanh toán</h2>
+
+    @if (!string.IsNullOrEmpty(SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @SuccessMessage
+            <button type="button" class="btn-close" @onclick="() => SuccessMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @ErrorMessage
+            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null"></button>
+        </div>
+    }
+
+    <EditForm Model="Filter" OnSubmit="ApplyFilter" FormName="OrdersFilterForm">
+        <div class="row g-3 mb-4 bg-light p-3 rounded">
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Mã đơn hàng</label>
+                <InputText @bind-Value="Filter.SearchOrderId" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Khách hàng</label>
+                <InputText @bind-Value="Filter.SearchCustomer" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Ngày thanh toán</label>
+                <InputText @bind-Value="Filter.SearchDate" class="form-control" placeholder="dd/MM/yyyy" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Phương thức</label>
+                <InputSelect @bind-Value="Filter.Method" class="form-select">
+                    <option value="all">Tất cả</option>
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Thẻ">Thẻ</option>
+                </InputSelect>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Sắp xếp</label>
+                <InputSelect @bind-Value="Filter.SortBy" class="form-select">
+                    <option value="id_desc">ID (Mới nhất)</option>
+                    <option value="id_asc">ID (Cũ nhất)</option>
+                    <option value="date_desc">Ngày (Mới nhất)</option>
+                    <option value="date_asc">Ngày (Cũ nhất)</option>
+                </InputSelect>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">Lọc</button>
+                <button type="button" class="btn btn-secondary" @onclick="ClearFilter">Xóa</button>
+            </div>
+        </div>
+    </EditForm>
+
+    @if (IsLoading)
+    {
+        <p><em>Đang tải dữ liệu...</em></p>
+    }
+    else if (PagingResult == null || !PagingResult.Items.Any())
+    {
+        <div class="alert alert-warning">Không có dữ liệu.</div>
+    }
+    else
+    {
+        <p>Tìm thấy <strong>@PagingResult.TotalItems</strong> giao dịch.</p>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Ngày</th>
+                    <th>Số tiền</th>
+                    <th>Phương thức</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var payment in PagingResult.Items)
+                {
+                    <tr>
+                        <td>@payment.PaymentId</td>
+                        <td>#@payment.OrderId</td>
+                        <td>@(payment.Order?.Customer?.Name ?? "Khách lẻ")</td>
+                        <td>@payment.PaymentDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="text-danger">@payment.Amount.ToString("N0") ₫</td>
+                        <td>@payment.PaymentMethod</td>
+                        <td>
+                            <a class="btn btn-sm btn-info" href="/payments/details/@payment.PaymentId">Chi tiết</a>
+                            <a class="btn btn-sm btn-danger" href="/payments/delete/@payment.PaymentId">Xóa</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <nav>
+            <ul class="pagination">
+                <li class="page-item @(PagingResult.Page == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => GoToPage(PagingResult.Page - 1)">Previous</button>
+                </li>
+
+                @for (int i = 1; i <= PagingResult.TotalPages; i++)
+                {
+                    <li class="page-item @(i == PagingResult.Page ? "active" : "")">
+                        <button class="page-link" @onclick="() => GoToPage(i)">@i</button>
+                    </li>
+                }
+
+                <li class="page-item @(PagingResult.Page == PagingResult.TotalPages ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => GoToPage(PagingResult.Page + 1)">Next</button>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@code {
+    private PagedResult<Payment>? PagingResult;
+    private PaymentFilterDTO Filter = new();
+    private bool IsLoading = true;
+
+    [SupplyParameterFromQuery] public string? SuccessMessage { get; set; }
+    [SupplyParameterFromQuery] public string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        IsLoading = true;
+        PagingResult = await PaymentsService.GetPaymentsAsync(Filter);
+        IsLoading = false;
+    }
+
+    private async Task ApplyFilter()
+    {
+        Filter.Page = 1;
+        await LoadPayments();
+    }
+
+    private async Task ClearFilter()
+    {
+        Filter = new PaymentFilterDTO();
+        await LoadPayments();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (PagingResult == null || page < 1 || page > PagingResult.TotalPages) return;
+        Filter.Page = page;
+        await LoadPayments();
+    }
+}

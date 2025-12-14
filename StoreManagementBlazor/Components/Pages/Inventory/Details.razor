@@ -1,0 +1,104 @@
+﻿@page "/inventory/details/{InventoryId:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject InventoryService InventoryService
+
+<PageTitle>Chi tiết tồn kho</PageTitle>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header text-center py-3 px-4">
+            <h4 class="mb-0">Chi tiết tồn kho #@(inventory?.InventoryId)</h4>
+        </div>
+
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else if (inventory == null)
+            {
+                <div class="alert alert-danger text-center">
+                    Không tìm thấy thông tin tồn kho cho ID: <strong>@InventoryId</strong>
+                    <br />
+                    <a href="/inventory" class="btn btn-link">Quay về danh sách</a>
+                </div>
+            }
+            else
+            {
+
+                <dl class="row mb-4">
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Mã tồn kho</label>
+                        <div class="col-sm-9 d-flex align-items-center">
+                            <span>@inventory.InventoryId</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Sản phẩm</label>
+                        <div class="col-sm-9 d-flex align-items-center">
+                            @if (inventory.Product != null)
+                            {
+                                // Giả sử bạn có trang chi tiết sản phẩm
+                                <a class="text-decoration-none fw-bold" href="/products/details/@inventory.Product.ProductId">
+                                    @inventory.Product.ProductName
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted fst-italic">- Sản phẩm đã bị xóa hoặc không tồn tại -</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Số lượng</label>
+                        <div class="col-sm-9 d-flex align-items-center">
+                            <span class="badge text-dark fs-6">@inventory.Quantity</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Lần cập nhật cuối</label>
+                        <div class="col-sm-9 d-flex align-items-center">
+                            <span class="text-secondary">
+                                @(inventory.UpdatedAt.ToString("dd/MM/yyyy HH:mm:ss") ?? "Chưa cập nhật")
+                            </span>
+                        </div>
+                    </div>
+                </dl>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="/inventory" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Quay lại
+                    </a>
+                    <a href="/inventory/edit/@inventory.InventoryId" class="btn btn-primary">
+                        <i class="bi bi-pencil-square"></i> Cập nhật
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int InventoryId { get; set; }
+
+    private Inventory? inventory;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+        inventory = await InventoryService.GetInventoryById(InventoryId);
+
+        isLoading = false;
+    }
+}

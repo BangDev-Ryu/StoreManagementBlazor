@@ -1,0 +1,101 @@
+﻿@page "/inventory/edit/{InventoryId:int}"
+@rendermode InteractiveServer
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@using System.ComponentModel.DataAnnotations
+@inject NavigationManager Navigation
+@inject InventoryService InventoryService
+
+<PageTitle>Cập nhật tồn kho</PageTitle>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light text-center py-3 px-4">
+            <h4 class="mb-0">Cập nhật số lượng tồn kho #@(inventory?.InventoryId)</h4>
+        </div>
+
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <div class="text-center text-muted">Đang tải...</div>
+            }
+            else if (inventory == null)
+            {
+                <div class="text-danger">Không tìm thấy mục tồn kho.</div>
+            }
+            else
+            {
+                <EditForm Model="inventory" OnValidSubmit="Save" FormName="InventoryEditForm">
+                    <DataAnnotationsValidator />
+
+                    <input type="hidden" value="@inventory.InventoryId" />
+
+
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Sản phẩm</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" value="@(inventory.Product?.ProductName ?? "-")" disabled />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Số lượng hiện có</label>
+                        <div class="col-sm-9">
+                            <input class="form-control" value="@(inventory.Quantity)" disabled />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label fw-semibold">Số lượng mới</label>
+                        <div class="col-sm-9">
+                            <InputNumber class="form-control" @bind-Value="inventory.Quantity" />
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/inventory" type="button" class="btn btn-outline-secondary">Quay lại</a>
+                        <button type="submit" class="btn btn-primary" disabled="@saving">Lưu</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] 
+    public int InventoryId { get; set; }
+
+    private Inventory? inventory;
+    private bool isLoading = true;
+    private bool saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        inventory = await InventoryService.GetInventoryById(InventoryId);
+        isLoading = false;
+    }
+
+    private async Task Save()
+    {
+        if (inventory == null) return;
+        saving = true;
+        try
+        {
+            await InventoryService.UpdateInventory(inventory);
+            Navigation.NavigateTo("/inventory");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/inventory");
+}
