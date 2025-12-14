@@ -1,4 +1,18 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using StoreManagementBlazor.Components.Pages.Auth
+@inherits LayoutComponentBase
+@inject StoreManagementBlazor.Services.AuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+
+@code {
+    private bool? isAuthenticated;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated == true;
+    }
+}
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -10,7 +24,14 @@
         </div>
 
         <article class="content px-4">
-            @Body
+            @if (isAuthenticated == false)
+            {
+                <Login />
+            }
+            else if (isAuthenticated == true)
+            {
+                @Body
+            }
         </article>
     </main>
 </div>

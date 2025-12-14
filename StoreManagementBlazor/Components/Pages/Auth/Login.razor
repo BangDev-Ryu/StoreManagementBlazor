@@ -1,0 +1,65 @@
+﻿@page "/login"
+@using Microsoft.AspNetCore.Authorization
+@using StoreManagementBlazor.ViewModels
+@inject StoreManagementBlazor.Services.AuthService AuthService
+@inject NavigationManager Nav
+
+<PageTitle>Đăng nhập</PageTitle>
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="mb-3">Đăng nhập</h3>
+                <EditForm Model="model" OnValidSubmit="HandleLogin" FormName="LoginForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label class="form-label">Tên đăng nhập</label>
+                             <InputText class="form-control" @bind-Value="model.Username" @bind-Value:event="oninput" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mật khẩu</label>
+                             <InputText type="password" class="form-control" @bind-Value="model.Password" @bind-Value:event="oninput" />
+                    </div>
+                    <button type="submit"
+                            class="btn btn-primary w-100">
+                        Đăng nhập
+                    </button>
+                </EditForm>
+                @if (!string.IsNullOrEmpty(error))
+                {
+                    <div class="text-danger mt-3">@error</div>
+                }
+            <div class="alert alert-secondary mt-3">
+                <b>DEBUG</b>: Username: <code>@model.Username</code> | Password: <code>@model.Password</code>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [SupplyParameterFromForm]
+    private LoginViewModel model { get; set; } = new();
+    private string? error;
+    private async Task HandleLogin()
+    {
+        error = null;
+        try
+        {
+            var result = await AuthService.LoginAsync(model);
+            if (result)
+            {
+                Console.WriteLine("Login successful" + result);
+                Nav.NavigateTo("/");
+            }
+            else
+            {
+                error = "Tên đăng nhập hoặc mật khẩu không đúng";
+            }
+        }
+        catch
+        {
+            error = "Tên đăng nhập hoặc mật khẩu không đúng";
+        }
+    }
+}

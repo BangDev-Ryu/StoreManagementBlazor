@@ -1,4 +1,4 @@
-﻿using Blazored.Toast;
+using Blazored.Toast;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
@@ -36,7 +36,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<AuthService>();
+// Register AuthService as a typed HTTP client so HttpClient is injected automatically.
+// Set BaseAddress from configuration if you have an API URL, otherwise fallback to localhost.
+builder.Services.AddHttpClient<AuthService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBase") ?? "https://localhost:5001/");
+});
+
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
 builder.Services.AddScoped<UserService>();
