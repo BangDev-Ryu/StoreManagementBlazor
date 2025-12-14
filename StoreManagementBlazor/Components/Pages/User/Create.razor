@@ -1,73 +1,107 @@
 @page "/users/create"
-@using StoreManagementBlazor.Models
+@rendermode InteractiveServer
+@using StoreManagementBlazor.Models.ViewModels
 @using StoreManagementBlazor.Services
 @inject UserService UserService
-@inject NavigationManager Navigation
-@inject Blazored.Toast.Services.IToastService ToastService
-@rendermode InteractiveServer
+@inject NavigationManager NavManager
 
-<h3>Thêm người dùng mới</h3>
+<div class="container mt-4">
+    <h3>Thêm tài khoản mới</h3>
+    
+    <div class="card">
+        <div class="card-body">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger">@ErrorMessage</div>
+            }
 
-<div class="row">
-    <div class="col-md-6">
-        <EditForm Model="user" OnValidSubmit="HandleSubmit" FormName="CreateUserForm">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+            <EditForm Model="Model" OnValidSubmit="HandleCreate">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tên đăng nhập (*)</label>
+                        <InputText class="form-control" @bind-Value="Model.Username" />
+                        <ValidationMessage For="() => Model.Username" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Mật khẩu (*)</label>
+                        <InputText type="password" class="form-control" @bind-Value="Model.Password" />
+                         </div>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Tên đăng nhập</label>
-                <InputText class="form-control" @bind-Value="user.Username" required />
-            </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Họ và tên (*)</label>
+                        <InputText class="form-control" @bind-Value="Model.FullName" />
+                        <ValidationMessage For="() => Model.FullName" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Vai trò</label>
+                        <InputSelect class="form-select" @bind-Value="Model.Role">
+                            <option value="staff">Nhân viên (Staff)</option>
+                            <option value="admin">Quản trị viên (Admin)</option>
+                            <option value="customer">Khách hàng (Customer)</option>
+                        </InputSelect>
+                    </div>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Mật khẩu</label>
-                <InputText type="password" class="form-control" @bind-Value="plainPassword" placeholder="Để trống mặc định là 123456" />
-            </div>
+                @if (Model.Role == "customer")
+                {
+                    <div class="card bg-light mt-3 mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title text-primary">Thông tin khách hàng (Bắt buộc)</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Số điện thoại (*)</label>
+                                    <InputText class="form-control" @bind-Value="Model.Phone" />
+                                    <ValidationMessage For="() => Model.Phone" class="text-danger" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email (*)</label>
+                                    <InputText class="form-control" @bind-Value="Model.Email" placeholder="example@gmail.com" />
+                                    <ValidationMessage For="() => Model.Email" class="text-danger" />
+                                </div>
+                            </div>
 
-            <div class="mb-3">
-                <label class="form-label">Họ và tên</label>
-                <InputText class="form-control" @bind-Value="user.FullName" />
-            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Địa chỉ (*)</label>
+                                <InputTextArea class="form-control" @bind-Value="Model.Address" rows="2" />
+                                <ValidationMessage For="() => Model.Address" class="text-danger" />
+                            </div>
+                        </div>
+                    </div>
+                }
 
-            <div class="mb-3">
-                <label class="form-label">Vai trò</label>
-                <InputSelect class="form-select" @bind-Value="user.Role">
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                    <option value="customer">Customer</option>
-                </InputSelect>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Lưu</button>
-            <a href="/users" class="btn btn-secondary">Hủy</a>
-        </EditForm>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Lưu lại</button>
+                    <a href="/users" class="btn btn-secondary">Hủy</a>
+                </div>
+            </EditForm>
+        </div>
     </div>
 </div>
 
 @code {
-    [SupplyParameterFromForm]
-    private User user { get; set; } = new User { Role = "staff" };
-    
-    [SupplyParameterFromForm]
-    private string plainPassword { get; set; } = "";
+    private UserAdminViewModel Model = new() { Role = "staff" };
+    private string? ErrorMessage;
 
-    private async Task HandleSubmit()
+    private async Task HandleCreate()
     {
-        if(string.IsNullOrWhiteSpace(user.Username))
+        // Kiểm tra thêm mật khẩu vì IValidatableObject không check required password cho create
+        if (string.IsNullOrEmpty(Model.Password))
         {
-            ToastService.ShowError("Vui lòng nhập Username");
+            ErrorMessage = "Vui lòng nhập mật khẩu.";
             return;
         }
 
-        var result = await UserService.CreateUserAsync(user, plainPassword);
+        var result = await UserService.CreateUserAsync(Model);
         if (result.success)
         {
-            ToastService.ShowSuccess(result.message);
-            Navigation.NavigateTo("/users");
+            NavManager.NavigateTo("/users");
         }
         else
         {
-            ToastService.ShowError(result.message);
+            ErrorMessage = result.message;
         }
     }
 }

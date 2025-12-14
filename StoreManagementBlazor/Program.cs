@@ -4,9 +4,12 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
-using StoreManagementBlazor.Models;  // <-- Thêm nếu cần reference DbContext ở đây (thường không cần)
+using StoreManagementBlazor.Models; 
 using StoreManagementBlazor.Services;
+using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using StoreManagementBlazor.ViewModels; 
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,5 +72,54 @@ app.UseAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// === THÊM ĐOẠN NÀY ===
+// Tạo một endpoint HTTP GET để xử lý đăng xuất
+app.MapGet("/logout", async (Microsoft.AspNetCore.Http.HttpContext context) =>
+{
+    // Xóa cookie xác thực
+    await context.SignOutAsync(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
+    
+    // Chuyển hướng về trang đăng nhập
+    return Results.Redirect("/login");
+});
+// =====================
+
+// Endpoint xử lý đăng nhập dạng Form POST
+app.MapPost("/login-handler", async (HttpContext context, [FromForm] LoginViewModel model, ApplicationDbContext db) =>
+{
+    // 1. Kiểm tra user trong DB
+    var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == model.Username);
+
+    if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.Password))
+    {
+        // Đăng nhập thất bại: Quay lại trang login với thông báo lỗi
+        return Results.Redirect("/login?error=InvalidCredentials");
+    }
+
+    // 2. Tạo Claims
+    var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(ClaimTypes.Role, user.Role ?? "User"),
+        new Claim("FullName", user.FullName ?? "")
+    };
+
+    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+    var principal = new ClaimsPrincipal(identity);
+
+    // 3. Ghi Cookie xác thực (Quan trọng: Hoạt động ổn định tại đây)
+    await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
+        new AuthenticationProperties
+        {
+            IsPersistent = model.RememberMe,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
+        });
+
+    // 4. Chuyển hướng về trang chủ
+    return Results.Redirect("/");
+});
+// =====================
 
 app.Run();
