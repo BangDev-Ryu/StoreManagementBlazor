@@ -1,10 +1,10 @@
-﻿using Blazored.Toast;
+using Blazored.Toast;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
-using StoreManagementBlazor.Models;  // <-- Thêm nếu cần reference DbContext ở đây (thường không cần)
+using StoreManagementBlazor.Models;
 using StoreManagementBlazor.Services;
 using System.Security.Claims;
 
@@ -36,17 +36,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<AuthService>();
+// Register AuthService as a typed HTTP client so HttpClient is injected automatically.
+// Set BaseAddress from configuration if you have an API URL, otherwise fallback to localhost.
+builder.Services.AddHttpClient<AuthService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBase") ?? "https://localhost:5001/");
+});
+
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
-builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<OrdersService>(); // <-- Đã thêm
-builder.Services.AddScoped<PaymentsService>(); // <-- Đã thêm
 
 builder.Services.AddBlazoredToast();
-builder.Services.AddScoped<InventoryService>();
-
 
 // ================= BLAZOR =================
 builder.Services.AddRazorComponents()
@@ -62,11 +63,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
