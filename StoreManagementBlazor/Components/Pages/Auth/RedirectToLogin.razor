@@ -3,6 +3,15 @@
 @code {
     protected override void OnInitialized()
     {
-        Nav.NavigateTo("/", true);
+        var current = Nav.Uri;
+
+        if (!current.Contains("/login") &&
+            !current.Contains("/register"))
+        {
+            Nav.NavigateTo(
+                "/login?returnUrl=" +
+                Uri.EscapeDataString(new Uri(current).PathAndQuery),
+                true);
+        }
     }
 }

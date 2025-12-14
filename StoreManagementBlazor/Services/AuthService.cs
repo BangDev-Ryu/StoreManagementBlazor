@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +68,40 @@ namespace StoreManagementBlazor.Services
         public ClaimsPrincipal? GetCurrentUser()
         {
             return _httpContextAccessor.HttpContext?.User;
+        }
+        public async Task<(bool Success, string Message)> RegisterAsync(RegisterViewModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.Username) || string.IsNullOrWhiteSpace(model.Password) || string.IsNullOrWhiteSpace(model.FullName))
+                return (false, "Vui lòng nhập đầy đủ thông tin.");
+            if (model.Password != model.ConfirmPassword)
+                return (false, "Mật khẩu xác nhận không khớp.");
+
+            var existedUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == model.Username);
+            if (existedUser != null)
+                return (false, "Tên đăng nhập đã tồn tại.");
+
+            var user = new User
+            {
+                Username = model.Username,
+                Password = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                FullName = model.FullName,
+                Role = "Customer",
+                CreatedAt = DateTime.Now
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            // Lấy Id vừa tạo
+            var customer = new Customer
+            {
+                UserId = user.UserId,
+                Name = model.FullName,
+                CreatedAt = DateTime.Now
+            };
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+
+            return (true, "Đăng ký thành công! Bạn có thể đăng nhập.");
         }
     }
 }

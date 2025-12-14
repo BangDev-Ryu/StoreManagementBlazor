@@ -1,0 +1,78 @@
+@page "/register"
+@layout EmptyLayout
+@using Microsoft.AspNetCore.Authorization
+@using StoreManagementBlazor.Components.Layout
+@using StoreManagementBlazor.ViewModels
+@using StoreManagementBlazor.Services
+@inject AuthService AuthService
+
+@inject NavigationManager Navigation
+@attribute [AllowAnonymous]
+
+
+@if (!string.IsNullOrEmpty(alertMsg))
+{
+    <div class="alert @alertClass mt-3">@alertMsg</div>
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4>Đăng ký</h4>
+            </div>
+            <div class="card-body">
+                <EditForm Model="registerModel" OnValidSubmit="HandleRegister" FormName="registerForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label>Họ tên</label>
+                        <InputText class="form-control" @bind-Value="registerModel.FullName" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Tên đăng nhập</label>
+                        <InputText class="form-control" @bind-Value="registerModel.Username" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Mật khẩu</label>
+                        <InputText class="form-control" @bind-Value="registerModel.Password" type="password" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Nhập lại mật khẩu</label>
+                        <InputText class="form-control" @bind-Value="registerModel.ConfirmPassword" type="password" />
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit">Đăng ký</button>
+                </EditForm>
+                <div class="text-center mt-3">
+                    <span>Đã có tài khoản? </span>
+                    <a href="/login" class="text-primary">Đăng nhập</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    RegisterViewModel registerModel { get; set; } = new();
+
+    string alertMsg = string.Empty;
+    string alertClass = string.Empty;
+    
+    private async Task HandleRegister()
+    {
+        var result = await AuthService.RegisterAsync(registerModel);
+        if (result.Success)
+        {
+            alertMsg = result.Message;
+            alertClass = "alert-success";
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/login");
+        }
+        else
+        {
+            alertMsg = result.Message;
+            alertClass = "alert-danger";
+        }
+    }
+}
