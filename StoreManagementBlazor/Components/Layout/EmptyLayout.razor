@@ -1,0 +1,25 @@
+﻿@inherits LayoutComponentBase
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Title</title>
+
+    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" />
+</head>
+
+<body class="bg-light">
+    <div class="container">
+        @Body
+    </div>
+
+</body>
+</html>
+
+@code {
+    [CascadingParameter]
+    public string? Title { get; set; }
+}

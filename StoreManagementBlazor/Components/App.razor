@@ -1,9 +1,11 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Reflection
 @using StoreManagementBlazor.Components.Layout
 @using StoreManagementBlazor.Components.Pages.Auth
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,27 +20,33 @@
 
 <body>
     <CascadingAuthenticationState>
-        <Router AppAssembly="@typeof(App).Assembly">
+        <Router AppAssembly="@typeof(Program).Assembly">
             <Found Context="routeData">
-                <AuthorizeRouteView RouteData="@routeData"
-                    DefaultLayout="@typeof(MainLayout)">
-                    <NotAuthorized>
-                        @if (context.User.Identity?.IsAuthenticated == true)
-                        {
-                            <p class="text-danger p-3">
-                                Bạn không có quyền truy cập trang này.
-                            </p>
-                        }
-                        else
-                        {
+
+                @if (routeData.PageType
+                    .GetCustomAttributes(typeof(AllowAnonymousAttribute), true)
+                    .Any())
+                {
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                }
+                else
+                {
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                        <NotAuthorized>
                             <RedirectToLogin />
-                        }
-                    </NotAuthorized>
-                </AuthorizeRouteView>
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                }
             </Found>
+
+            <NotFound>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <p>Không tìm thấy trang</p>
+                </LayoutView>
+            </NotFound>
         </Router>
     </CascadingAuthenticationState>
+
     <script src="_framework/blazor.web.js"></script>
 </body>
-
 </html>

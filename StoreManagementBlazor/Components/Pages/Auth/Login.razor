@@ -1,6 +1,11 @@
 ﻿@page "/login"
+@layout EmptyLayout
+@using Microsoft.AspNetCore.Authorization
+@using StoreManagementBlazor.Components.Layout
 @using StoreManagementBlazor.ViewModels
+
 @inject NavigationManager NavigationManager
+@attribute [AllowAnonymous]
 
 <div class="row justify-content-center mt-5">
     <div class="col-md-4">
@@ -36,6 +41,10 @@
 
                     <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
                 </form>
+                <div class="text-center mt-3">
+                    <span>Chưa có tài khoản? </span>
+                    <a href="/register" class="text-primary">Đăng ký tài khoản</a>
+                </div>
             </div>
         </div>
     </div>
