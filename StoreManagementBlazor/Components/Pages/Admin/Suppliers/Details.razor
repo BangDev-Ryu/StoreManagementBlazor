@@ -1,0 +1,56 @@
+@page "/admin/suppliers/details/{id:int}"
+@rendermode InteractiveServer
+@inject SupplierService SupplierService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5>👁 Chi tiết nhà cung cấp</h5>
+    </div>
+
+    <div class="card-body">
+        @if (supplier == null)
+        {
+            <p>Đang tải...</p>
+        }
+        else
+        {
+            <dl class="row">
+                <dt class="col-sm-4">Tên nhà cung cấp</dt>
+                <dd class="col-sm-8">@supplier.Name</dd>
+
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@supplier.Email</dd>
+
+                <dt class="col-sm-4">Số điện thoại</dt>
+                <dd class="col-sm-8">@supplier.Phone</dd>
+
+                <dt class="col-sm-4">Địa chỉ</dt>
+                <dd class="col-sm-8">@supplier.Address</dd>
+            </dl>
+
+            <div class="text-end">
+                <button class="btn btn-secondary"
+                        @onclick="@(() => Nav.NavigateTo("/admin/suppliers"))">
+                    Quay lại
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Supplier? supplier;
+
+    protected override async Task OnInitializedAsync()
+    {
+        supplier = await SupplierService.GetByIdAsync(id);
+
+        if (supplier == null)
+        {
+            // Nếu không tìm thấy, quay về danh sách
+            Nav.NavigateTo("/admin/suppliers");
+        }
+    }
+}

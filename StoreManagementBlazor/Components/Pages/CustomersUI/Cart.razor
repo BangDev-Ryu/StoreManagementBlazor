@@ -1,0 +1,86 @@
+@page "/cart"
+@inject CartService CartService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Giỏ hàng</h5>
+        <a href="/shopping" class="btn btn-outline-secondary px-4">Quay lại mua sắm</a>
+    </div>
+
+    <div class="card-body">
+        @if (!CartService.Items.Any())
+        {
+            <p class="text-center text-muted">Giỏ hàng trống</p>
+        }
+        else
+        {
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Giá</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                        <th class="text-center">Xóa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int i = 1;
+                        foreach (var item in CartService.Items)
+                        {
+                            <tr>
+                                <td>@i</td>
+                                <td>@item.Product?.ProductName</td>
+                                <td>@item.Price.ToString("N0") đ</td>
+                                <td>@item.Quantity</td>
+                                <td>@item.Subtotal.ToString("N0") đ</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-danger"
+                                           @onclick="() => RemoveFromCart(item.ProductId)">
+                                        X
+                                    </button>
+
+
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end fw-bold">Tổng tiền</td>
+                        <td colspan="2" class="fw-bold">@CartService.TotalAmount.ToString("N0") đ</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <button class="btn btn-success" @onclick="Checkout">Thanh toán</button>
+            <button class="btn btn-secondary ms-2" @onclick="ClearCart">Xóa giỏ hàng</button>
+        }
+    </div>
+</div>
+
+@code {
+   void RemoveFromCart(int? productId)
+{
+    if (!productId.HasValue) return; // bỏ qua nếu null
+
+    CartService.RemoveProduct(productId.Value);
+}
+
+
+    void ClearCart()
+    {
+        CartService.Clear();
+    }
+
+    void Checkout()
+    {
+        // Chưa có logic thanh toán, có thể gọi API tạo order
+        Nav.NavigateTo("/checkout");
+    }
+}

@@ -1,0 +1,107 @@
+@page "/admin/suppliers/edit/{Id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject SupplierService SupplierService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+@rendermode InteractiveServer
+
+<PageTitle>Sửa nhà cung cấp</PageTitle>
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Sửa nhà cung cấp</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/admin/suppliers">Nhà cung cấp</a></li>
+        <li class="breadcrumb-item active">Sửa nhà cung cấp</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin nhà cung cấp
+        </div>
+        <div class="card-body">
+            @if (supplier == null)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="supplier" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên nhà cung cấp</label>
+                            <InputText @bind-Value="supplier.Name" class="form-control" placeholder="VD: ABC Supplier" />
+                            <ValidationMessage For="() => supplier.Name" class="text-danger small mt-2" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <InputText @bind-Value="supplier.Email" class="form-control" placeholder="VD: abc@example.com" />
+                            <ValidationMessage For="() => supplier.Email" class="text-danger small mt-2" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Số điện thoại</label>
+                            <InputText @bind-Value="supplier.Phone" class="form-control" placeholder="VD: 0123456789" />
+                            <ValidationMessage For="() => supplier.Phone" class="text-danger small mt-2" />
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Địa chỉ</label>
+                            <InputTextArea @bind-Value="supplier.Address" class="form-control" rows="3" placeholder="Nhập địa chỉ..." />
+                            <ValidationMessage For="() => supplier.Address" class="text-danger small mt-2" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a href="/admin/suppliers" class="btn btn-outline-secondary px-4">Hủy</a>
+                        <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Supplier? supplier;
+
+    protected override async Task OnInitializedAsync()
+    {
+        supplier = await SupplierService.GetByIdAsync(Id);
+
+        if (supplier == null)
+        {
+            Navigation.NavigateTo("/admin/suppliers");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (supplier != null)
+        {
+            var result = await SupplierService.UpdateAsync(supplier);
+
+            if (!result.success)
+            {
+                toastService.ShowError(result.message);
+                return;
+            }
+
+            toastService.ShowSuccess(result.message);
+            await Task.Delay(1000);
+            Navigation.NavigateTo("/admin/suppliers");
+        }
+    }
+}

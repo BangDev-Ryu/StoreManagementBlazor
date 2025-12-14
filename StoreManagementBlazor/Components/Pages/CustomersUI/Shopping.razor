@@ -1,0 +1,211 @@
+@page "/shopping"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Danh sách sản phẩm</h5>
+        <button class="btn btn-primary"
+                @onclick="@(() => Nav.NavigateTo("/cart"))">
+            Giỏ hàng
+        </button>
+    </div>
+
+    <div class="card-body">
+
+        <!-- SEARCH -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input class="form-control"
+                       placeholder="Sản phẩm / Barcode..."
+                       @bind="search"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select"
+                        @bind="selectedCategoryId">
+                    <option value="">-- Danh mục --</option>
+                    @foreach (var c in categoryMap)
+                    {
+                        <option value="@c.Key">@c.Value</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <input type="number"
+                       class="form-control"
+                       placeholder="Giá từ"
+                       @bind="minPrice"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="col-md-2">
+                <input type="number"
+                       class="form-control"
+                       placeholder="Giá đến"
+                       @bind="maxPrice"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100"
+                        @onclick="ClearFilter">
+                    Đặt lại
+                </button>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:60px">STT</th>
+                    <th>Tên</th>
+                    <th>Danh mục</th>
+                    <th>Giá</th>
+                    <th>Đơn vị</th>
+                    <th class="text-center" style="width:100px">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (PagedProducts.Any())
+                {
+                    int i = (currentPage - 1) * pageSize + 1;
+                    @foreach (var p in PagedProducts)
+                    {
+                        <tr>
+                            <td>@i</td>
+                            <td>@p.ProductName</td>
+                            <td>@GetCategoryName(p.CategoryId)</td>
+                            <td>@p.Price.ToString("N0") đ</td>
+                            <td>@p.Unit</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning"
+                                        @onclick="() => AddToCart(p)">
+                                    ➕
+                                </button>
+                            </td>   
+
+                        </tr>
+                        i++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            Không có dữ liệu
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- PAGINATION -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                    <button type="button" class="page-link"
+                            @onclick="() => ChangePage(currentPage - 1)">
+                        &laquo; Prev
+                    </button>
+                </li>
+
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    int pageNumber = i;
+                    if (pageNumber == 1 || pageNumber == totalPages ||
+                        (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2))
+                    {
+                        <li class="page-item @(pageNumber == currentPage ? "active" : "")">
+                            <button type="button" class="page-link"
+                                    @onclick="() => ChangePage(pageNumber)">
+                                @pageNumber
+                            </button>
+                        </li>
+                    }
+                    else if (pageNumber == currentPage - 3 && currentPage > 4)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                    else if (pageNumber == currentPage + 3 && currentPage < totalPages - 3)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                }
+
+                <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                    <button type="button" class="page-link"
+                            @onclick="() => ChangePage(currentPage + 1)">
+                        Next &raquo;
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@code {
+    List<Product> products = new();
+    Dictionary<int, string> categoryMap = new();
+
+    string search = "";
+    decimal? minPrice, maxPrice;
+    int? selectedCategoryId;
+
+    // Pagination
+    int currentPage = 1;
+    int pageSize = 10;
+    int totalPages => (int)Math.Ceiling((double)FilteredProducts.Count() / pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await ProductService.GetAllAsync();
+        var categories = await ProductService.GetCategoriesAsync();
+        categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
+    }
+
+    IEnumerable<Product> FilteredProducts =>
+        products.Where(p =>
+            (string.IsNullOrWhiteSpace(search)
+                || p.ProductName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (p.Barcode != null && p.Barcode.Contains(search))) &&
+            (!selectedCategoryId.HasValue || p.CategoryId == selectedCategoryId) &&
+            (!minPrice.HasValue || p.Price >= minPrice) &&
+            (!maxPrice.HasValue || p.Price <= maxPrice)
+        );
+
+    IEnumerable<Product> PagedProducts =>
+        FilteredProducts
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize);
+
+    void ChangePage(int page)
+    {
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        currentPage = page;
+    }
+
+    void ClearFilter()
+    {
+        search = "";
+        minPrice = maxPrice = null;
+        selectedCategoryId = null;
+        currentPage = 1;
+    }
+
+    string GetCategoryName(int? id)
+        => id.HasValue && categoryMap.ContainsKey(id.Value) ? categoryMap[id.Value] : "";
+
+    [Inject] CartService CartService { get; set; } = null!;
+
+    void AddToCart(Product product)
+    {
+        CartService.AddProduct(product, 1); 
+    }
+
+}
