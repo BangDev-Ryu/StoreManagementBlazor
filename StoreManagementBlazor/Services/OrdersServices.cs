@@ -79,7 +79,9 @@ namespace StoreManagementBlazor.Services
                     OrderId = o.OrderId,
                     CustomerName = o.Customer != null ? o.Customer.Name : "Khách lẻ",
                     OrderDate = o.OrderDate,
-                    Status = o.Status ?? "pending",
+                    Status = string.IsNullOrWhiteSpace(o.Status)
+                    ? "pending"
+                    : o.Status,
                     TotalAmount = o.TotalAmount ?? 0m,
                     DiscountAmount = o.DiscountAmount ?? 0m
                 })
@@ -368,12 +370,22 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
             {
                 OrderId = order.OrderId,
                 CustomerName = order.Customer?.Name ?? "Khách lẻ",
+
+                CustomerPhone = order.Customer?.Phone,
+                CustomerEmail = order.Customer?.Email,
+                CustomerAddress = order.Customer?.Address,
+
                 OrderDate = order.OrderDate,
-                Status = order.Status ?? "pending",
+                Status = string.IsNullOrWhiteSpace(order.Status)
+                    ? "pending"
+                    : order.Status,
                 TotalAmount = order.TotalAmount ?? 0m,
                 DiscountAmount = order.DiscountAmount ?? 0m,
                 PromoCode = order.Promotion?.PromoCode,
-                Payment = order.Payment,
+                IsPaid = order.Payment != null,
+                PaymentMethod = order.Payment != null
+                    ? order.Payment.PaymentMethod
+                    : null,
                 Items = order.Items?.Select(i => new OrderItemDTO
                 {
                     ProductName = i.Product?.ProductName ?? "Sản phẩm đã xóa",
@@ -407,10 +419,10 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
             _db.Payments.Add(payment);
 
             // Cập nhật trạng thái Order
-            order.Status = "completed";
+            order.Status = "paid";
             await _db.SaveChangesAsync();
 
-            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId} bằng {paymentMethod}!");
+            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId} bằng {DisplayPaymentMethod(paymentMethod)}!");
         }
 
         // ====================================================================================
@@ -471,7 +483,7 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                Console.WriteLine(ex); // hoặc logger
+                Console.WriteLine(ex);
                 return (false, "Có lỗi hệ thống.");
             }
         }
