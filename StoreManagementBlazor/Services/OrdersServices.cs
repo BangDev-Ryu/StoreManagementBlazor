@@ -475,5 +475,101 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
                 return (false, "Có lỗi hệ thống.");
             }
         }
+
+
+public async Task<(List<OrderListDTO> Orders, int TotalCount)>
+    GetCustomerOrderHistoryAsync(
+        int customerId,
+        int page,
+        int pageSize,
+        string searchText)
+{
+    var query = _db.Orders
+        .Include(o => o.Customer)
+        .Where(o => o.CustomerId == customerId);
+
+    // Tìm theo mã đơn
+    if (!string.IsNullOrWhiteSpace(searchText))
+    {
+        query = query.Where(o =>
+            o.OrderId.ToString().Contains(searchText));
+    }
+
+    var totalCount = await query.CountAsync();
+
+    var orders = await query
+        .OrderByDescending(o => o.OrderDate)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(o => new OrderListDTO
+        {
+            OrderId = o.OrderId,
+            OrderDate = o.OrderDate,
+            Status = o.Status ?? "pending",
+            TotalAmount = o.TotalAmount ?? 0m,
+            DiscountAmount = o.DiscountAmount ?? 0m,
+            CustomerName = o.Customer!.Name
+        })
+        .ToListAsync();
+
+    return (orders, totalCount);
+}
+
+        // ====================================================================================
+// VI. Lịch sử đơn hàng của KHÁCH ĐANG ĐĂNG NHẬP
+// ====================================================================================
+public async Task<PagedResult<OrderListDTO>> GetOrderHistoryByCustomerAsync(
+    int customerId,
+    int page,
+    int pageSize,
+    string? searchText)
+{
+    var query = _db.Orders
+        .Include(o => o.Customer)
+        .Where(o => o.CustomerId == customerId)
+        .AsQueryable();
+
+    // Tìm theo mã đơn hoặc trạng thái
+    if (!string.IsNullOrWhiteSpace(searchText))
+    {
+        searchText = searchText.Trim();
+        query = query.Where(o =>
+            o.OrderId.ToString().Contains(searchText) ||
+            (o.Status != null && o.Status.Contains(searchText))
+        );
+    }
+
+    query = query.OrderByDescending(o => o.OrderDate);
+
+    var totalItems = await query.CountAsync();
+    var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+    if (totalPages < 1) totalPages = 1;
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+
+    var items = await query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(o => new OrderListDTO
+        {
+            OrderId = o.OrderId,
+            CustomerName = o.Customer != null ? o.Customer.Name : "Khách",
+            OrderDate = o.OrderDate,
+            Status = o.Status ?? "pending",
+            TotalAmount = o.TotalAmount ?? 0m,
+            DiscountAmount = o.DiscountAmount ?? 0m
+        })
+        .ToListAsync();
+
+    return new PagedResult<OrderListDTO>
+    {
+        Items = items,
+        TotalItems = totalItems,
+        TotalPages = totalPages,
+        Page = page,
+        PageSize = pageSize
+    };
+}
+
     }
 }

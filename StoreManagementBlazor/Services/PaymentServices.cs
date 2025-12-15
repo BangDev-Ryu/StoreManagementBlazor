@@ -134,5 +134,79 @@ namespace StoreManagementBlazor.Services
                 return (false, $"Lỗi hệ thống khi xóa thanh toán #{id}: {ex.Message}");
             }
         }
+
+        public async Task<(bool success, string message, int orderId)> CreateOrderWithPaymentAsync(
+        string userId,
+        List<CartItem> cartItems,
+        decimal discountAmount,
+        string paymentMethod)
+    {
+        using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            int? customerId = null;
+            if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int parsedId))
+            {
+                customerId = parsedId;
+            }
+
+            // 1. Tạo Order
+            var order = new Order
+            {
+                CustomerId = customerId,
+                OrderDate = DateTime.Now,
+                Status = "pending",
+                TotalAmount = cartItems.Sum(i => i.Subtotal) - discountAmount,
+                DiscountAmount = discountAmount
+            };
+            _db.Orders.Add(order);
+            await _db.SaveChangesAsync(); // để có OrderId
+
+            // 2. Tạo OrderItem
+            foreach (var item in cartItems)
+            {
+                var orderItem = new OrderItem
+                {
+                    OrderId = order.OrderId,
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    Subtotal = item.Subtotal
+                };
+                _db.OrderItems.Add(orderItem);
+
+                // Trừ tồn kho nếu cần
+                var inventory = await _db.Inventories.FirstOrDefaultAsync(i => i.ProductId == item.ProductId);
+                if (inventory != null)
+                {
+                    inventory.Quantity -= item.Quantity;
+                    _db.Inventories.Update(inventory);
+                }
+            }
+
+            // 3. Tạo Payment
+            var payment = new Payment
+            {
+                OrderId = order.OrderId,
+                Amount = order.TotalAmount ?? 0m,
+                PaymentMethod = paymentMethod,
+                PaymentDate = DateTime.Now
+            };
+            _db.Payments.Add(payment);
+
+            // 4. Commit
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId}", order.OrderId);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return (false, $"Lỗi khi lưu đơn hàng: {ex.Message}", 0);
+        }
+    }
+
+
     }
 }

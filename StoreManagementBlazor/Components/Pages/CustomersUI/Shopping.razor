@@ -11,13 +11,14 @@
         <button class="btn btn-primary position-relative"
                 @onclick="@(() => Nav.NavigateTo("/cart"))">
             Giỏ hàng
-            @if (CartService.Items.Any())
+            @if (items.Any())
             {
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    @CartService.Items.Sum(x => x.Quantity)
+                    @items.Sum(x => x.Quantity)
                 </span>
             }
         </button>
+
     </div>
 
     <div class="card-body">
@@ -172,6 +173,8 @@
 }
 
 @code {
+    List<CartItem> items = new();
+
     List<Product> products = new();
     Dictionary<int, string> categoryMap = new();
 
@@ -188,11 +191,14 @@
     bool showModal = false;
 
     protected override async Task OnInitializedAsync()
-    {
-        products = await ProductService.GetAllAsync();
-        var categories = await ProductService.GetCategoriesAsync();
-        categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
-    }
+{
+    products = await ProductService.GetAllAsync();
+    var categories = await ProductService.GetCategoriesAsync();
+    categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
+
+    items = await CartService.GetCartItemsAsync(); // load giỏ hàng hiện tại từ DB
+}
+
 
     IEnumerable<Product> FilteredProducts =>
         products.Where(p =>
@@ -238,12 +244,14 @@
 
     void CloseModal() => showModal = false;
 
-    void ConfirmAddToCart()
+    async Task ConfirmAddToCart()
+{
+    if (selectedProduct != null)
     {
-        if (selectedProduct != null)
-        {
-            CartService.AddProduct(selectedProduct, selectedQuantity);
-        }
-        showModal = false;
+        await CartService.AddProductAsync(selectedProduct, selectedQuantity);
+        items = await CartService.GetCartItemsAsync(); // cập nhật tổng số lượng
     }
+    showModal = false;
+}
+
 }

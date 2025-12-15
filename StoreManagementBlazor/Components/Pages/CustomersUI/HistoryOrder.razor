@@ -1,0 +1,194 @@
+@page "/history_order"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using StoreManagementBlazor.Models.ViewModels
+@using Microsoft.AspNetCore.Authorization
+
+
+@inject OrdersService OrdersService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<PageTitle>Lịch sử đơn hàng</PageTitle>
+
+<div class="container mt-4">
+    <h3 class="mb-3">🧾 Lịch sử đơn hàng của bạn</h3>
+
+    <!-- Tìm kiếm + page size -->
+    <div class="row g-3 align-items-end mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Tìm theo mã đơn</label>
+            <input class="form-control"
+                   placeholder="Nhập mã đơn..."
+                   @bind="searchText"
+                   @oninput="OnSearchInput" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Số dòng / trang</label>
+            <select class="form-select" @onchange="OnPageSizeChanged">
+                <option value="5" selected="@(pageSize == 5)">5</option>
+                <option value="10" selected="@(pageSize == 10)">10</option>
+                <option value="20" selected="@(pageSize == 20)">20</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>STT</th>
+                    <th>Mã đơn</th>
+                    <th>Ngày đặt</th>
+                    <th>Trạng thái</th>
+                    <th class="text-end">Giảm giá</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th class="text-center">Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!orders.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            Bạn chưa có đơn hàng nào
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    int stt = (currentPage - 1) * pageSize + 1;
+                    foreach (var o in orders)
+                    {
+                        <tr>
+                            <td>@stt</td>
+                            <td>#@o.OrderId</td>
+                            <td>@o.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge bg-@(o.Status == "completed" ? "success" : "warning")">
+                                    @o.Status
+                                </span>
+                            </td>
+                            <td class="text-end">@o.DiscountAmount.ToString("N0") đ</td>
+                            <td class="text-end fw-bold text-danger">
+                                @o.TotalAmount.ToString("N0") đ
+                            </td>
+                            <td class="text-center">
+                                <NavLink class="btn btn-sm btn-info"
+                                         href="@($"/orders/details/{o.OrderId}")">
+                                    Xem
+                                </NavLink>
+                            </td>
+                        </tr>
+                        stt++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="() => ChangePage(currentPage - 1)">
+                    &laquo;
+                </button>
+            </li>
+
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <button class="page-link" @onclick="() => ChangePage(i)">
+                        @i
+                    </button>
+                </li>
+            }
+
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <button class="page-link" @onclick="() => ChangePage(currentPage + 1)">
+                    &raquo;
+                </button>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@code {
+    private List<OrderListDTO> orders = new();
+    private string searchText = "";
+    private int currentPage = 1;
+    private int pageSize = 5;
+    private int totalPages = 1;
+    private int totalCount = 0;
+    private int customerId;
+
+    private System.Timers.Timer? _debounceTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        customerId = int.Parse(
+            user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"
+        );
+
+        _debounceTimer = new System.Timers.Timer(500);
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Elapsed += async (_, _) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                currentPage = 1;
+                await LoadData();
+                StateHasChanged();
+            });
+        };
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var result = await OrdersService.GetCustomerOrderHistoryAsync(
+            customerId,
+            currentPage,
+            pageSize,
+            searchText);
+
+        orders = result.Orders;
+        totalCount = result.TotalCount;
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        if (totalPages < 1) totalPages = 1;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        _debounceTimer?.Stop();
+        _debounceTimer?.Start();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int size))
+        {
+            pageSize = size;
+            currentPage = 1;
+            await LoadData();
+        }
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        await LoadData();
+    }
+}
