@@ -61,7 +61,9 @@ namespace StoreManagementBlazor.Services
 
         public async Task<(bool success, string message)> Update(Customer customer)
         {
-            var exist = await _db.Customers.FindAsync(customer.CustomerId);
+            var exist = await _db.Customers
+                .FirstOrDefaultAsync(c => c.CustomerId == customer.CustomerId);
+            
             if (exist == null)
                 return (false, "Không tìm thấy khách hàng");
 

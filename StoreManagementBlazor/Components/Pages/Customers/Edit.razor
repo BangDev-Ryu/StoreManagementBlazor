@@ -1,15 +1,19 @@
 ﻿@page "/customers/edit/{CustomerId:int}"
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject CustomerService CustomerService
+@inject ApplicationDbContext _context;
 @inject Blazored.Toast.Services.IToastService toast
 @inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
 
 <div class="container mt-4">
     <div class="card shadow-sm">
         <div class="card-header bg-light text-center py-3 px-4">
-            <h4 class="mb-0">Chỉnh sửa khách hàng #@Customer.CustomerId</h4>
+            <h4 class="mb-0">Chỉnh sửa khách hàng #@Customer?.CustomerId</h4>
         </div>
         <div class="card-body">
             @if (IsLoading)
@@ -78,7 +82,7 @@
     [Parameter]
     public int CustomerId { get; set; }
 
-    private Customer Customer = new Customer();
+    private Customer? Customer;
     private bool IsLoading = true;
     private bool IsSaving = false;
     private string Message = string.Empty;
@@ -91,24 +95,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCustomer();
-    }
-
-    private async Task LoadCustomer()
-    {
         IsLoading = true;
-        Customer? loadedCustomer = await CustomerService.GetById(CustomerId);
+        Customer = await _context.Customers.AsNoTracking()
+                               .FirstOrDefaultAsync(p => p.CustomerId == CustomerId);
 
-        if (loadedCustomer != null)
+        if (Customer == null)
         {
-            Customer = loadedCustomer;
+            NavigationManager.NavigateTo("/customers");
         }
-        else
-        {
-            // Xử lý trường hợp không tìm thấy khách hàng nếu cần
-            Customer = null;
-        }
-
         IsLoading = false;
     }
 
@@ -138,6 +132,7 @@
             {
                 // HIỂN THỊ TOAST THÔNG BÁO THẤT BẠI
                 toast.ShowError(result.message);
+                return;
             }
         }
         catch (Exception ex)
