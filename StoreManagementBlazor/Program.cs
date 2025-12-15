@@ -3,37 +3,40 @@ using Microsoft.EntityFrameworkCore;
 using StoreManagementBlazor.Components;
 using StoreManagementBlazor.Models;
 using StoreManagementBlazor.Services;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext
+// ================= DB CONTEXT =================
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     var cs = builder.Configuration.GetConnectionString("DefaultConnection");
     options.UseMySql(cs, ServerVersion.AutoDetect(cs));
 });
-builder.Services.AddBlazoredToast();
+
+// ================= SERVICES =================
+builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PromotionService>();
 builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<UserService>();
 
-// Add services to the container.
+builder.Services.AddBlazoredToast();
+builder.Services.AddScoped<InventoryService>();
+
+
+// ================= BLAZOR =================
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ================= PIPELINE =================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
