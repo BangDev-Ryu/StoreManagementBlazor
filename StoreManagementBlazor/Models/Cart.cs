@@ -12,4 +12,6 @@ public partial class Cart
     public string? Status { get; set; }
 
     public decimal? TotalAmount { get; set; }
+
+    public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 }
