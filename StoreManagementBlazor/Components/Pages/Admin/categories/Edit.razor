@@ -1,0 +1,95 @@
+@page "/admin/categories/edit/{Id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject CategoryService CategoryService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+@rendermode InteractiveServer
+
+<PageTitle>Sửa danh mục</PageTitle>
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Sửa danh mục</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/admin/categories">Danh mục</a></li>
+        <li class="breadcrumb-item active">Sửa danh mục</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin danh mục
+        </div>
+        <div class="card-body">
+            @if (category == null)
+            {
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Đang tải dữ liệu...</p>
+                </div>
+            }
+            else
+            {
+                <EditForm Model="category" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" />
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tên danh mục</label>
+                            <InputText @bind-Value="category.CategoryName" class="form-control" placeholder="VD: Điện thoại" />
+                            <ValidationMessage For="() => category.CategoryName" class="text-danger small mt-2" />
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-end gap-2">
+                        <a href="/admin/categories" class="btn btn-outline-secondary px-4">Hủy</a>
+                        <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Category? category;
+
+    protected override async Task OnInitializedAsync()
+    {
+        category = await CategoryService.GetByIdAsync(Id);
+
+        if (category == null)
+        {
+            Navigation.NavigateTo("/admin/categories");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (category == null) return;
+
+        if (string.IsNullOrWhiteSpace(category.CategoryName))
+        {
+            toastService.ShowError("Tên danh mục không được để trống.");
+            return;
+        }
+
+        var result = await CategoryService.UpdateAsync(category);
+
+        if (!result.success)
+        {
+            toastService.ShowError(result.message);
+            return;
+        }
+
+        toastService.ShowSuccess(result.message);
+        await Task.Delay(1000);
+        Navigation.NavigateTo("/admin/categories");
+    }
+}

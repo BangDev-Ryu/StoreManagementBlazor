@@ -1,17 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
-namespace StoreManagementBlazor.Models;
-
-public partial class Supplier
+namespace StoreManagementBlazor.Models
 {
-    public int SupplierId { get; set; }
+    public class Supplier
+    {
+        public int SupplierId { get; set; }
 
-    public string Name { get; set; } = null!;
+        [Required(ErrorMessage = "Tên nhà cung cấp là bắt buộc")]
+        public string Name { get; set; } = string.Empty;
 
-    public string? Phone { get; set; }
+        [Required(ErrorMessage = "Email là bắt buộc")]
+        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        public string Email { get; set; } = string.Empty;
 
-    public string? Email { get; set; }
+        [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+        public string Phone { get; set; } = string.Empty;
 
-    public string? Address { get; set; }
+        public string? Address { get; set; }
+    }
 }

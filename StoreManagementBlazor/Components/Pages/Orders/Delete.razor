@@ -1,4 +1,5 @@
 @page "/orders/delete/{OrderId:int}"
+@rendermode InteractiveServer
 @using StoreManagementBlazor.Models.ViewModels
 @using StoreManagementBlazor.Services
 @inject OrdersService OrdersService
@@ -46,7 +47,6 @@
             </div>
         </div>
 
-        @* Blazor thay thế <form asp-action="Delete" method="post"> bằng EditForm để gọi phương thức C# *@
         <EditForm Model="Order" OnValidSubmit="HandleDelete">
             <button type="submit" class="btn btn-outline-danger">
                 Xóa đơn hàng
@@ -83,17 +83,14 @@
     {
         ErrorMessage = null;
         
-        // Gọi OrdersService.DeleteOrderAsync(OrderId)
         var (success, message) = await OrdersService.DeleteOrderAsync(OrderId); 
 
         if (success)
         {
-            // Chuyển hướng về Index và truyền thông báo thành công qua query string
             NavigationManager.NavigateTo($"/orders?success={Uri.EscapeDataString(message)}");
         }
         else
         {
-            // Hiển thị lỗi
             ErrorMessage = message;
         }
     }

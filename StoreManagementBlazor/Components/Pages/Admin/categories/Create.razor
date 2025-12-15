@@ -1,0 +1,69 @@
+@page "/admin/categories/create"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject CategoryService CategoryService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+
+@rendermode InteractiveServer
+
+<PageTitle>Tạo danh mục</PageTitle>
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Tạo danh mục</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/admin/categories">Danh mục</a></li>
+        <li class="breadcrumb-item active">Tạo danh mục</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin danh mục
+        </div>
+        <div class="card-body">
+            <EditForm Model="category" OnValidSubmit="HandleSubmit" FormName="createCategoryForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Tên danh mục</label>
+                        <InputText @bind-Value="category.CategoryName" class="form-control" placeholder="VD: Điện thoại" />
+                        <ValidationMessage For="() => category.CategoryName" class="text-danger small mt-1" />
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="/admin/categories" class="btn btn-outline-secondary px-4">Hủy</a>
+                    <button type="submit" class="btn btn-primary px-4">Lưu</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Category category = new Category();
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(category.CategoryName))
+        {
+            toastService.ShowError("Tên danh mục không được để trống.");
+            return;
+        }
+
+        var result = await CategoryService.CreateAsync(category);
+
+        if (!result.success)
+        {
+            toastService.ShowError(result.message);
+            return;
+        }
+
+        toastService.ShowSuccess(result.message);
+        await Task.Delay(1000);
+        Navigation.NavigateTo("/admin/categories");
+    }
+}

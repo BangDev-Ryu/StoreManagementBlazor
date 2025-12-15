@@ -1,0 +1,202 @@
+@page "/admin/suppliers"
+@inject SupplierService SupplierService
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Nhà cung cấp</PageTitle>
+
+<div class="container-fluid mt-3">
+    <h2>Quản lý nhà cung cấp</h2>
+
+    <div class="row w-100 g-3 align-items-end mb-3">
+        <div class="col-md-3">
+            <label class="form-label">Tìm kiếm</label>
+            <input class="form-control" placeholder="Nhà cung cấp..."
+                   @bind="searchText" @oninput="OnSearchInput" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Số dòng / trang</label>
+            <select class="form-select" @onchange="OnPageSizeChanged">
+                <option value="5" selected="@(pageSize == 5)">5</option>
+                <option value="10" selected="@(pageSize == 10)">10</option>
+                <option value="25" selected="@(pageSize == 25)">25</option>
+                <option value="50" selected="@(pageSize == 50)">50</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <button class="btn btn-outline-secondary" @onclick="ResetFilter">Đặt lại</button>
+        </div>
+    </div>
+
+    <p>
+        <NavLink class="btn btn-primary" href="/admin/suppliers/create">Thêm nhà cung cấp</NavLink>
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>STT</th>
+                    <th>Tên nhà cung cấp</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Địa chỉ</th>
+                    <th class="text-center">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (pagedSuppliers == null || !pagedSuppliers.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Không có dữ liệu</td>
+                    </tr>
+                }
+                else
+                {
+                    int stt = (currentPage - 1) * pageSize + 1;
+                    foreach (var s in pagedSuppliers)
+                    {
+                        <tr>
+                            <td>@stt</td>
+                            <td>@s.Name</td>
+                            <td>@s.Phone</td>
+                            <td>@s.Email</td>
+                            <td>@s.Address</td>
+                            <td class="text-center">
+                                <NavLink class="btn btn-info" href="@($"/admin/suppliers/details/{s.SupplierId}")">Chi tiết</NavLink>
+                                <NavLink class="btn btn-warning" href="@($"/admin/suppliers/edit/{s.SupplierId}")">Sửa</NavLink>
+                                <NavLink class="btn btn-danger" href="@($"/admin/suppliers/delete/{s.SupplierId}")">Xóa</NavLink>
+                            </td>
+                        </tr>
+                        stt++;
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+
+            <!-- Prev -->
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                <button type="button" class="page-link"
+                        style="outline:none !important; box-shadow:none !important;"
+                        @onclick="() => ChangePage(currentPage - 1)"
+                        disabled="@(currentPage <= 1)">
+                    &laquo; Prev
+                </button>
+            </li>
+
+            @{
+                for (int i = 1; i <= totalPages; i++)
+                {
+                    int pageNumber = i; 
+
+                    if (pageNumber == 1 || pageNumber == totalPages ||
+                    (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2))
+                    {
+                        <li class="page-item @(pageNumber == currentPage ? "active" : "")">
+                            <button type="button" class="page-link"
+                                    style="outline:none !important; box-shadow:none !important;"
+                                    @onclick="() => ChangePage(pageNumber)">
+                                @pageNumber
+                            </button>
+                        </li>
+                    }
+                    else if (pageNumber == currentPage - 3 && currentPage > 4)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                    else if (pageNumber == currentPage + 3 && currentPage < totalPages - 3)
+                    {
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    }
+                }
+            }
+
+            <!-- Next -->
+            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                <button type="button" class="page-link"
+                        style="outline:none !important; box-shadow:none !important;"
+                        @onclick="() => ChangePage(currentPage + 1)"
+                        disabled="@(currentPage >= totalPages)">
+                    Next &raquo;
+                </button>
+            </li>
+
+        </ul>
+    </nav>
+</div>
+
+@code {
+    private List<Supplier> pagedSuppliers = new();
+    private string searchText = "";
+    private int currentPage = 1;
+    private int pageSize = 5;
+    private int totalPages = 1;
+    private int totalCount = 0;
+
+    private System.Timers.Timer? _debounceTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _debounceTimer = new System.Timers.Timer(500);
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Elapsed += async (sender, e) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                currentPage = 1;
+                await LoadData();
+                StateHasChanged();
+            });
+        };
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var result = await SupplierService.GetPagedAsync(currentPage, pageSize, searchText);
+        pagedSuppliers = result.Suppliers;
+        totalCount = result.TotalCount;
+        totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+        if (totalPages < 1) totalPages = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        _debounceTimer?.Stop();
+        _debounceTimer?.Start();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newSize))
+        {
+            pageSize = newSize;
+            currentPage = 1;
+            await LoadData();
+        }
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        await LoadData();
+    }
+
+    private async Task ResetFilter()
+    {
+        searchText = "";
+        pageSize = 5;
+        currentPage = 1;
+        await LoadData();
+    }
+}

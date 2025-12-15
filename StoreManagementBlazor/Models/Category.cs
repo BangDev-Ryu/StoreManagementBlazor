@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace StoreManagementBlazor.Models;
-
-public partial class Category
+public class Category
 {
     public int CategoryId { get; set; }
 
-    public string CategoryName { get; set; } = null!;
+    [Required(ErrorMessage = "Tên danh mục không được để trống.")]
+    [StringLength(100, ErrorMessage = "Tên danh mục không quá 100 ký tự.")]
+    public string CategoryName { get; set; } = string.Empty;
+
+    
 }

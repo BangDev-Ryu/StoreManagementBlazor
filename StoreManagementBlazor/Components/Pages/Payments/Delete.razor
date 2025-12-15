@@ -1,4 +1,5 @@
 @page "/payments/delete/{PaymentId:int}"
+@rendermode InteractiveServer
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject PaymentsService PaymentsService
@@ -13,69 +14,92 @@
     <div class="alert alert-danger">@ErrorMessage</div>
 }
 
-@if (Payment == null && !IsLoading)
-{
-    <div class="alert alert-danger">Không tìm thấy giao dịch thanh toán #@PaymentId.</div>
-}
-else if (IsLoading)
+@if (IsLoading)
 {
     <p><em>Đang tải dữ liệu...</em></p>
 }
+else if (Payment == null)
+{
+    <div class="alert alert-danger">
+        Không tìm thấy giao dịch thanh toán #@PaymentId.
+    </div>
+}
 else
 {
-    <div class="alert alert-warning">
-        <p>Bạn có chắc chắn muốn xóa giao dịch thanh toán này?</p>
-        <hr/>
-        <p><strong>ID Thanh toán:</strong> @Payment!.PaymentId</p>
+    <div class="card border-danger p-3">
+        <h5 class="text-danger">Xác nhận xóa thanh toán</h5>
+        <hr />
+
+        <p><strong>ID:</strong> @Payment.PaymentId</p>
         <p><strong>Đơn hàng:</strong> #@Payment.OrderId</p>
         <p><strong>Khách hàng:</strong> @(Payment.Order?.Customer?.Name ?? "Khách lẻ")</p>
-        <p><strong>Số tiền:</strong> @Payment.Amount.ToString("N0")₫</p>
-        <p><strong>Phương thức:</strong> @Payment.PaymentMethod</p>
-        <p class="mt-3">**LƯU Ý:** Thao tác này sẽ đặt lại trạng thái Đơn hàng **#@Payment.OrderId** về **'Chờ thanh toán'**.</p>
-    </div>
+        <p><strong>Số tiền:</strong> @Payment.Amount.ToString("N0") ₫</p>
+        <p><strong>Phương thức:</strong> @DisplayPaymentMethod(Payment.PaymentMethod)</p>
 
-    <EditForm OnSubmit="HandleDelete">
-        <button type="submit" class="btn btn-danger" disabled="@IsLoading">
-            <span class="spinner-border spinner-border-sm" hidden="@(!IsLoading)"></span>
-            Xóa Giao Dịch
-        </button>
-        <a href="/payments" class="btn btn-secondary">Hủy</a>
-    </EditForm>
+        <p class="text-warning mt-3">
+            ⚠ Sau khi xóa, đơn hàng <b>#@Payment.OrderId</b> sẽ quay về trạng thái
+            <b>Chờ thanh toán</b>.
+        </p>
+
+        <div class="mt-3">
+            <button class="btn btn-danger" @onclick="ConfirmDelete" disabled="@IsDeleting">
+                <span class="spinner-border spinner-border-sm" hidden="@(!IsDeleting)"></span>
+                Xóa thanh toán
+            </button>
+
+            <button class="btn btn-secondary ms-2" @onclick="Back">
+                Hủy
+            </button>
+        </div>
+    </div>
 }
 
 @code {
-    [Parameter]
-    public int PaymentId { get; set; }
+    [Parameter] public int PaymentId { get; set; }
 
     private Payment? Payment;
     private bool IsLoading = true;
+    private bool IsDeleting = false;
     private string? ErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        IsLoading = true;
         Payment = await PaymentsService.GetPaymentDetailsAsync(PaymentId);
         IsLoading = false;
     }
 
-    private async Task HandleDelete()
+    private async Task ConfirmDelete()
     {
         if (Payment == null) return;
 
-        IsLoading = true;
+        IsDeleting = true;
         ErrorMessage = null;
 
         var (success, message) = await PaymentsService.DeletePaymentAsync(PaymentId);
 
         if (success)
         {
-            // Chuyển hướng về trang Index với thông báo thành công
-            NavigationManager.NavigateTo($"/payments?success={Uri.EscapeDataString(message)}", forceLoad: true);
+            NavigationManager.NavigateTo(
+                $"/payments?success={Uri.EscapeDataString(message)}",
+                forceLoad: true
+            );
         }
         else
         {
             ErrorMessage = message;
-            IsLoading = false;
+            IsDeleting = false;
         }
     }
+
+    private void Back()
+        => NavigationManager.NavigateTo("/payments");
+
+    private static string DisplayPaymentMethod(string method) => method switch
+    {
+        "cash" => "Tiền mặt",
+        "card" => "Thẻ",
+        "bank_transfer" => "Chuyển khoản",
+        "e-wallet" => "Ví điện tử",
+        _ => method
+    };
 }

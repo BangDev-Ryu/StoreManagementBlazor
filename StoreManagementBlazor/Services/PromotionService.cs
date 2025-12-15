@@ -114,6 +114,15 @@ namespace StoreManagementBlazor.Services
                 return (false, "Lỗi khi lưu dữ liệu: " + ex.Message);
             }
         }
+
+        public async Task<Promotion?> GetPromoByCode(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return null;
+
+            var allPromos = await GetAll(); 
+            return allPromos.Promotions.FirstOrDefault(p => p.PromoCode.Equals(code, StringComparison.OrdinalIgnoreCase));
+        }
         public async Task DeletePromotion(int id)
         {
             var promo = await _context.Promotions.FindAsync(id);

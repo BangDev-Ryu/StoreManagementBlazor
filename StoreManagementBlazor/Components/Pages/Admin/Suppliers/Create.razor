@@ -1,0 +1,81 @@
+@page "/admin/suppliers/create"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject SupplierService SupplierService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+
+@rendermode InteractiveServer
+
+<PageTitle>Tạo nhà cung cấp</PageTitle>
+
+<div class="container-fluid mt-4" style="user-select: none;">
+    <h1 class="mt-4">Tạo nhà cung cấp</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/admin/suppliers">Nhà cung cấp</a></li>
+        <li class="breadcrumb-item active">Tạo nhà cung cấp</li>
+    </ol>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            Thông tin nhà cung cấp
+        </div>
+        <div class="card-body">
+            <EditForm Model="supplier" OnValidSubmit="HandleSubmit" FormName="createSupplierForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Tên nhà cung cấp</label>
+                        <InputText @bind-Value="supplier.Name" class="form-control" placeholder="VD: ABC Supplier" />
+                        <ValidationMessage For="() => supplier.Name" class="text-danger small mt-1" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email</label>
+                        <InputText @bind-Value="supplier.Email" class="form-control" placeholder="VD: abc@example.com" />
+                        <ValidationMessage For="() => supplier.Email" class="text-danger small mt-1" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Số điện thoại</label>
+                        <InputText @bind-Value="supplier.Phone" class="form-control" placeholder="VD: 0123456789" />
+                        <ValidationMessage For="() => supplier.Phone" class="text-danger small mt-1" />
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Địa chỉ</label>
+                        <InputTextArea @bind-Value="supplier.Address" class="form-control" rows="3" placeholder="Nhập địa chỉ..." />
+                        <ValidationMessage For="() => supplier.Address" class="text-danger small mt-1" />
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="/admin/suppliers" class="btn btn-outline-secondary px-4">Hủy</a>
+                    <button type="submit" class="btn btn-primary px-4">Lưu</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Supplier supplier = new Supplier();
+
+    private async Task HandleSubmit()
+    {
+        var result = await SupplierService.CreateAsync(supplier);
+
+        if (!result.success)
+        {
+            toastService.ShowError(result.message);
+            return;
+        }
+
+        toastService.ShowSuccess(result.message);
+        await Task.Delay(1000);
+        Navigation.NavigateTo("/admin/suppliers");
+    }
+}

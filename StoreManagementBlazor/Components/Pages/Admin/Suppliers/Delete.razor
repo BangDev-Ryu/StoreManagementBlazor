@@ -1,0 +1,105 @@
+@page "/admin/suppliers/delete/{Id:int}"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject SupplierService SupplierService
+@inject NavigationManager Navigation
+@inject Blazored.Toast.Services.IToastService toastService
+@rendermode InteractiveServer
+
+<div class="container-fluid px-4" style="user-select: none;">
+    <h1 class="mt-4">Xóa nhà cung cấp</h1>
+
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/admin/suppliers">Nhà cung cấp</a></li>
+        <li class="breadcrumb-item active">Xóa nhà cung cấp</li>
+    </ol>
+
+    @if (supplier == null)
+    {
+        <div class="text-center p-3">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Đang tải dữ liệu...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card border-danger mb-4 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-trash-alt me-2"></i> Xác nhận xóa nhà cung cấp
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Cảnh báo!</strong> Bạn có chắc chắn muốn xóa nhà cung cấp này? Hành động này không thể hoàn tác.
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold">Tên nhà cung cấp:</label>
+                    <div class="p-3 bg-light border rounded">@supplier.Name</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold">Email:</label>
+                    <div class="p-3 bg-light border rounded">@supplier.Email</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold">Số điện thoại:</label>
+                    <div class="p-3 bg-light border rounded">@supplier.Phone</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="fw-bold">Địa chỉ:</label>
+                    <div class="p-3 bg-light border rounded">@supplier.Address</div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="/admin/suppliers" class="btn btn-secondary px-4">
+                        <i class="fas fa-times me-1"></i> Hủy
+                    </a>
+
+                    <button class="btn btn-danger px-4" @onclick="ConfirmDelete">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Supplier? supplier;
+
+    protected override async Task OnInitializedAsync()
+    {
+        supplier = await SupplierService.GetByIdAsync(Id);
+
+        if (supplier == null)
+        {
+            Navigation.NavigateTo("/admin/suppliers");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (supplier != null)
+        {
+            var result = await SupplierService.DeleteAsync(Id);
+
+            if (!result.success)
+            {
+                toastService.ShowError(result.message);
+                return;
+            }
+
+            toastService.ShowSuccess(result.message);
+            Navigation.NavigateTo("/admin/suppliers");
+
+        }
+    }
+}
