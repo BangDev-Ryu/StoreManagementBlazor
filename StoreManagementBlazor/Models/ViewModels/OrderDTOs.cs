@@ -71,18 +71,22 @@ namespace StoreManagementBlazor.Models.ViewModels
     }
     
     public class OrderDetailsDTO
-    {
-        public int OrderId { get; set; }
-        public string CustomerName { get; set; } = "Khách lẻ";
-        public DateTime OrderDate { get; set; }
-        public string Status { get; set; } = "pending";
-        public decimal TotalAmount { get; set; }
-        public decimal DiscountAmount { get; set; }
-        public string? PromoCode { get; set; }
-        
-        // Payment là model (Payment.cs) đã được Include
-        public Models.Payment? Payment { get; set; }
-        
-        public List<OrderItemDTO> Items { get; set; } = new();
-    }
+{
+    public int OrderId { get; set; }
+    public string CustomerName { get; set; } = "Khách lẻ";
+
+    public string? CustomerEmail { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
+
+    public DateTime OrderDate { get; set; }
+    public string Status { get; set; } = "pending";
+    public decimal TotalAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public string? PromoCode { get; set; }
+
+    public string? PaymentMethod { get; set; }
+    public bool IsPaid { get; set; }
+    public List<OrderItemDTO> Items { get; set; } = new();
+}
 }
