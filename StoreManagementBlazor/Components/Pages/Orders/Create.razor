@@ -1,6 +1,7 @@
 @page "/orders/create"
 @rendermode InteractiveServer
 
+@using System.Globalization
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Models.ViewModels
 @using StoreManagementBlazor.Services
@@ -24,125 +25,161 @@
     else
     {
 
-    <!-- ================= KHÁCH HÀNG ================= -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <label class="form-label">Khách hàng</label>
-            <InputSelect class="form-select" @bind-Value="OrderData.CustomerId">
-                <option value="">-- Khách lẻ --</option>
-                @foreach (var c in Customers)
-                {
-                    <option value="@c.CustomerId">@c.Name - @c.Phone</option>
-                }
-            </InputSelect>
-        </div>
-    </div>
+        <!-- ================= KHÁCH HÀNG ================= -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <label class="form-label">Khách hàng</label>
 
-    <!-- ================= PROMO ================= -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <label>Mã khuyến mãi</label>
-            <div class="input-group">
-                <InputText class="form-control" @bind-Value="PromoCodeInput" />
-                <button class="btn btn-secondary" @onclick="ApplyPromoCode">
-                    Áp dụng
-                </button>
+                <div class="position-relative">
+                    <InputText class="form-control"
+                               placeholder="Nhập tên, SĐT hoặc ID khách hàng"
+                               @bind-Value="CustomerInput"
+                               @oninput="SearchCustomers" 
+                               @onfocus="ShowAllCustomers"/>
+
+                    @if (ShowCustomerSuggestions)
+                    {
+                        <ul class="list-group position-absolute w-100 mt-1" style="z-index:1000">
+                            <li class="list-group-item list-group-item-action"
+                                @onclick="() => SelectCustomer(null)">
+                                -- Khách lẻ --
+                            </li>
+
+                            @foreach (var c in FilteredCustomers)
+                            {
+                                <li class="list-group-item list-group-item-action"
+                                    @onclick="() => SelectCustomer(c)">
+                                    @c.Name
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
             </div>
-
-            @if (!string.IsNullOrEmpty(PromoCodeMessage))
-            {
-                <small class="text-@(IsPromoCodeValid ? "success" : "danger")">
-                    @PromoCodeMessage
-                </small>
-            }
         </div>
-    </div>
 
-    <!-- ================= SẢN PHẨM ================= -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <label>Sản phẩm</label>
-                    <InputSelect class="form-select" @bind-Value="SelectedProductId">
-                        <option value="0">-- Chọn sản phẩm --</option>
-                        @foreach (var p in Products)
-                        {
-                            <option value="@p.ProductId">@p.DisplayText</option>
-                        }
-                    </InputSelect>
-                </div>
-
-                <div class="col-md-3">
-                    <label>Số lượng</label>
-                    <InputNumber class="form-control" @bind-Value="SelectedQuantity" />
-                </div>
-
-                <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-primary w-100" @onclick="AddItemToCart">
-                        Thêm
+        <!-- ================= PROMO ================= -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <label>Mã khuyến mãi</label>
+                <div class="input-group">
+                    <InputText class="form-control" @bind-Value="PromoCodeInput" />
+                    <button class="btn btn-secondary" @onclick="ApplyPromoCode">
+                        Áp dụng
                     </button>
                 </div>
+
+                @if (!string.IsNullOrEmpty(PromoCodeMessage))
+                {
+                    <small class="text-@(IsPromoCodeValid ? "success" : "danger")">
+                        @PromoCodeMessage
+                    </small>
+                }
             </div>
         </div>
-    </div>
 
-    <!-- ================= GIỎ HÀNG ================= -->
-    <div class="card mb-3">
-        <div class="card-body">
-            @if (!OrderData.CartItems.Any())
-            {
-                <p class="text-muted">Chưa có sản phẩm</p>
-            }
-            else
-            {
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Sản phẩm</th>
-                            <th>SL</th>
-                            <th>Giá</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var i in OrderData.CartItems)
-                        {
-                            var p = Products.First(x => x.ProductId == i.ProductId);
+        <!-- ================= SẢN PHẨM ================= -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label>Sản phẩm</label>
+
+                        <div class="position-relative">
+                            <InputText class="form-control"
+                                       placeholder="Nhập tên hoặc ID sản phẩm"
+                                       @bind-Value="ProductInput"
+                                       @oninput="SearchProducts" 
+                                       @onfocus="ShowAllProducts"/>
+
+                            @if (ShowProductSuggestions)
+                            {
+                                <ul class="list-group position-absolute w-100 mt-1" style="z-index:1000">
+                                    @foreach (var p in FilteredProducts)
+                                    {
+                                        <li class="list-group-item list-group-item-action"
+                                            @onclick="() => SelectProduct(p)">
+                                            @p.DisplayText
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label>Số lượng</label>
+                        <InputNumber class="form-control" @bind-Value="SelectedQuantity" />
+                    </div>
+
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100"
+                                @onclick="AddItemToCart"
+                                disabled="@(SelectedProductId == 0 || SelectedQuantity <= 0)">
+                            Thêm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= GIỎ HÀNG ================= -->
+        <div class="card mb-3">
+            <div class="card-body">
+                @if (!OrderData.CartItems.Any())
+                {
+                    <p class="text-muted">Chưa có sản phẩm</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
                             <tr>
-                                <td>@p.ProductName</td>
-                                <td>@i.Quantity</td>
-                                <td>@(p.Price * i.Quantity).ToString("N0") ₫</td>
-                                <td>
-                                    <button class="btn btn-sm btn-danger"
-                                            @onclick="() => RemoveItem(i)">
-                                        Xóa
-                                    </button>
-                                </td>
+                                <th>Sản phẩm</th>
+                                <th>SL</th>
+                                <th>Giá</th>
+                                <th></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            }
+                        </thead>
+                        <tbody>
+                            @foreach (var i in OrderData.CartItems)
+                            {
+                                var p = Products.First(x => x.ProductId == i.ProductId);
+                                <tr>
+                                    <td>@p.ProductName</td>
+                                    <td>@i.Quantity</td>
+                                    <td>@FormatMoney(p.Price * i.Quantity) ₫</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger"
+                                                @onclick="() => RemoveItem(i)">
+                                            Xóa
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
         </div>
-    </div>
 
-    <!-- ================= TỔNG TIỀN ================= -->
-    <div class="card mb-3">
-        <div class="card-body">
-            <p>Tạm tính: <b>@RawTotal.ToString("N0") ₫</b></p>
-            <p>Giảm giá: <b>-@DiscountAmount.ToString("N0") ₫</b></p>
-            <h4>Thanh toán: @FinalTotal.ToString("N0") ₫</h4>
+        <!-- ================= TỔNG TIỀN ================= -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <p>Tạm tính: <b>@FormatMoney(RawTotal) ₫</b></p>
+                <p>Giảm giá: <b>-@FormatMoney(DiscountAmount) ₫</b></p>
+                <h4>Thanh toán: @FormatMoney(FinalTotal) ₫</h4>
+            </div>
         </div>
-    </div>
 
-    <!-- ================= SUBMIT ================= -->
-    <EditForm Model="OrderData" OnValidSubmit="HandleCreateOrder">
-        <DataAnnotationsValidator />
-        <button type="submit" class="btn btn-success w-100">
-            Tạo & Thanh toán
-        </button>
-    </EditForm>
+        <!-- ================= SUBMIT ================= -->
+        <EditForm Model="OrderData" OnValidSubmit="HandleCreateOrder">
+            <DataAnnotationsValidator />
+            <button type="submit" class="btn btn-success w-100"
+                    disabled="@(!OrderData.CartItems.Any())">
+                Tạo đơn hàng
+            </button>
+        </EditForm>
     }
 </div>
 
@@ -150,6 +187,20 @@
     private List<Customer> Customers = new();
     private List<ProductSelectionDTO> Products = new();
     private OrderCreationDTO OrderData = new();
+
+    // ===== KHÁCH HÀNG =====
+    private string CustomerInput = "";
+    private bool ShowCustomerSuggestions;
+    private List<Customer> FilteredCustomers = new();
+
+    // ===== SẢN PHẨM =====
+    private string FormatMoney(decimal value)
+    {
+        return value.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
+    }
+    private string ProductInput = "";
+    private bool ShowProductSuggestions;
+    private List<ProductSelectionDTO> FilteredProducts = new();
 
     private int SelectedProductId;
     private int SelectedQuantity = 1;
@@ -172,6 +223,84 @@
         IsLoading = false;
     }
 
+    // ===== KHÁCH HÀNG LOGIC =====
+    private void ShowAllCustomers(FocusEventArgs e)
+    {
+        FilteredCustomers = Customers.ToList();
+        ShowCustomerSuggestions = true;
+    }
+    private void SearchCustomers(ChangeEventArgs e)
+    {
+        CustomerInput = e.Value?.ToString() ?? "";
+
+        if (string.IsNullOrWhiteSpace(CustomerInput))
+        {
+            ShowCustomerSuggestions = false;
+            return;
+        }
+
+        var keyword = CustomerInput.ToLower();
+
+        FilteredCustomers = Customers
+            .Where(c =>
+                (!string.IsNullOrEmpty(c.Name) &&
+                c.Name.ToLower().Contains(keyword))
+                ||
+                (!string.IsNullOrEmpty(c.Phone) &&
+                c.Phone.Contains(keyword))
+                ||
+                c.CustomerId.ToString() == keyword
+            )
+            .ToList();
+
+        ShowCustomerSuggestions = FilteredCustomers.Any();
+    }
+
+    private void SelectCustomer(Customer? customer)
+    {
+        OrderData.CustomerId = customer?.CustomerId;
+
+        CustomerInput = customer?.Name ?? "";
+
+        ShowCustomerSuggestions = false;
+    }
+
+    // ===== SẢN PHẨM LOGIC =====
+    private void ShowAllProducts(FocusEventArgs e)
+    {
+        FilteredProducts = Products.ToList();
+        ShowProductSuggestions = true;
+    }
+    private void SearchProducts(ChangeEventArgs e)
+    {
+        ProductInput = e.Value?.ToString() ?? "";
+        SelectedProductId = 0;
+
+        if (string.IsNullOrWhiteSpace(ProductInput))
+        {
+            ShowProductSuggestions = false;
+            return;
+        }
+
+        var keyword = ProductInput.ToLower();
+
+        FilteredProducts = Products
+            .Where(p =>
+                p.ProductName.ToLower().Contains(keyword) ||
+                p.ProductId.ToString() == keyword)
+            .ToList();
+
+        ShowProductSuggestions = true;
+    }
+
+    private void SelectProduct(ProductSelectionDTO product)
+    {
+        SelectedProductId = product.ProductId;
+        ProductInput = product.DisplayText;
+        ShowProductSuggestions = false;
+    }
+
+    // ===== GIỎ HÀNG =====
     private async Task AddItemToCart()
     {
         if (SelectedProductId == 0 || SelectedQuantity <= 0) return;
@@ -193,24 +322,22 @@
         }
 
         SelectedProductId = 0;
+        ProductInput = "";
         SelectedQuantity = 1;
 
         await RecalculateTotals();
-        StateHasChanged();
     }
 
     private async Task RemoveItem(CartItemDTO item)
     {
         OrderData.CartItems.Remove(item);
         await RecalculateTotals();
-        StateHasChanged();
     }
 
     private async Task ApplyPromoCode()
     {
         OrderData.PromoCode = PromoCodeInput?.Trim();
         await RecalculateTotals();
-        StateHasChanged();
     }
 
     private async Task RecalculateTotals()

@@ -1,4 +1,6 @@
 @page "/orders/details/{OrderId:int}"
+@rendermode InteractiveServer
+
 @using StoreManagementBlazor.Models.ViewModels
 @using StoreManagementBlazor.Services
 @inject OrdersService OrdersService
@@ -15,7 +17,6 @@
     {
         <h2>Chi tiết đơn hàng #@OrderId</h2>
 
-        @* Thông báo *@
         @if (!string.IsNullOrEmpty(SuccessMessage))
         {
             <div class="alert alert-success">@SuccessMessage</div>
@@ -26,15 +27,47 @@
         }
 
         <div class="row g-4">
+            <!-- ================= LEFT: ORDER INFO ================= -->
             <div class="col-lg-8">
                 <div class="card shadow-sm">
                     <div class="card-body">
+
                         <div class="row mb-3 align-items-center">
                             <div class="col-md-6">
                                 <p class="mb-1">
                                     <strong>Ngày đặt hàng:</strong><br />
                                     @Order.OrderDate.ToString("dd/MM/yyyy HH:mm")
                                 </p>
+
+                                <p class="mb-1">
+                                    <strong>Khách hàng:</strong><br />
+                                    @Order.CustomerName
+                                </p>
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerPhone))
+                                {
+                                    <p class="mb-1">
+                                        <strong>SĐT:</strong><br />
+                                        @Order.CustomerPhone
+                                    </p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerEmail))
+                                {
+                                    <p class="mb-1">
+                                        <i class="fas fa-envelope"></i>
+                                        <strong>Email:</strong><br />
+                                        @Order.CustomerEmail
+                                    </p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerAddress))
+                                {
+                                    <p class="mb-1">
+                                        <strong>Địa chỉ:</strong><br />
+                                        @Order.CustomerAddress
+                                    </p>
+                                }
 
                                 <p class="mb-0">
                                     <strong>Mã khuyến mãi:</strong><br />
@@ -59,31 +92,36 @@
 
                         <hr />
 
+                        <!-- ================= PAYMENT SECTION ================= -->
                         <h5 class="mb-3">Trạng thái & Thanh toán</h5>
 
-                        @if (Order.Status == "completed")
+                        @if (Order.IsPaid)
                         {
-                            <p class="alert alert-success">
-                                <i class="fas fa-check-circle"></i> **Đã Thanh Toán**
-                                <br />
-                                Ngày thanh toán: @Order.Payment?.PaymentDate.ToString("dd/MM/yyyy HH:mm")
-                                <br />
-                                Phương thức: @Order.Payment?.PaymentMethod
-                            </p>
+                            <div class="alert alert-success">
+                                <strong>Đã thanh toán</strong><br />
+                                Phương thức:
+                                <b>@DisplayPaymentMethod(Order.PaymentMethod!)</b>
+                            </div>
                         }
                         else
                         {
-                            <p class="alert alert-warning">
-                                <i class="fas fa-clock"></i> **Chưa Thanh Toán**
-                            </p>
-                            
+                            <div class="alert alert-warning">
+                                <strong>Chưa thanh toán</strong>
+                            </div>
+
                             <div class="d-flex align-items-center gap-2">
-                                <InputSelect @bind-Value="PaymentMethod" class="form-select form-select-sm" style="width:150px;">
-                                    <option value="Cash">Tiền mặt</option>
-                                    <option value="Transfer">Chuyển khoản</option>
-                                </InputSelect>
-                                <button type="button" class="btn btn-success" @onclick="() => MarkAsPaid(PaymentMethod)">
-                                    <i class="fas fa-credit-card"></i> Thanh toán ngay
+                                <select class="form-select form-select-sm"
+                                        style="width:200px;"
+                                        @bind="SelectedPaymentMethod">
+                                    <option value="cash">Tiền mặt</option>
+                                    <option value="card">Thẻ</option>
+                                    <option value="bank_transfer">Chuyển khoản</option>
+                                    <option value="e-wallet">Ví điện tử</option>
+                                </select>
+
+                                <button class="btn btn-success"
+                                        @onclick="PayNow">
+                                    Thanh toán
                                 </button>
                             </div>
                         }
@@ -91,17 +129,22 @@
                 </div>
             </div>
 
+            <!-- ================= RIGHT: ORDER ITEMS ================= -->
             <div class="col-lg-4">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="mb-3">Sản phẩm trong đơn (@Order.Items.Count)</h5>
+                        <h5 class="mb-3">
+                            Sản phẩm trong đơn (@Order.Items.Count)
+                        </h5>
 
                         @foreach (var item in Order.Items)
                         {
                             <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
                                 <div>
                                     <strong>@item.ProductName</strong><br />
-                                    <small class="text-muted">@item.Price.ToString("N0")₫ x @item.Quantity</small>
+                                    <small class="text-muted">
+                                        @item.Price.ToString("N0") ₫ x @item.Quantity
+                                    </small>
                                 </div>
                                 <strong class="text-danger">
                                     @item.Subtotal.ToString("N0") ₫
@@ -113,11 +156,12 @@
 
                         <div class="d-flex justify-content-between">
                             <strong>Tổng tiền (chưa KM)</strong>
-                            <span class="text-muted">@(Order.TotalAmount + Order.DiscountAmount).ToString("N0") ₫</span>
+                            <span>@RawTotal.ToString("N0") ₫</span>
                         </div>
+
                         <div class="d-flex justify-content-between text-success">
                             <strong>Giảm giá</strong>
-                            <span>- @Order.DiscountAmount.ToString("N0") ₫</span>
+                            <span>-@Order.DiscountAmount.ToString("N0") ₫</span>
                         </div>
 
                         <div class="d-flex justify-content-between fs-5 mt-2">
@@ -140,11 +184,11 @@
 </div>
 
 @code {
-    [Parameter]
-    public int OrderId { get; set; }
+    [Parameter] public int OrderId { get; set; }
+    decimal RawTotal => Order?.Items.Sum(i => i.Subtotal) ?? 0;
 
     private OrderDetailsDTO? Order;
-    private string PaymentMethod { get; set; } = "Cash";
+    private string SelectedPaymentMethod = "cash";
     private string? SuccessMessage;
     private string? ErrorMessage;
 
@@ -152,32 +196,45 @@
     {
         await LoadOrderDetails();
     }
-    
+
     private async Task LoadOrderDetails()
     {
         Order = await OrdersService.GetOrderDetailsAsync(OrderId);
+
         if (Order == null)
         {
-            // Chuyển hướng nếu không tìm thấy, tương tự NotFound() trong Controller
-            NavigationManager.NavigateTo("/orders?error=Đơn hàng không tồn tại.");
+            NavigationManager.NavigateTo("/orders");
         }
     }
 
-    private async Task MarkAsPaid(string method)
+    private async Task PayNow()
     {
         SuccessMessage = null;
         ErrorMessage = null;
-        
-        var (success, message) = await OrdersService.MarkOrderAsPaidAsync(OrderId, method);
-        
+
+        var (success, message) =
+            await OrdersService.MarkOrderAsPaidAsync(
+                OrderId,
+                SelectedPaymentMethod
+            );
+
         if (success)
         {
             SuccessMessage = message;
-            await LoadOrderDetails(); // Tải lại chi tiết để cập nhật trạng thái UI
+            await LoadOrderDetails();
         }
         else
         {
             ErrorMessage = message;
         }
     }
+
+    private static string DisplayPaymentMethod(string method) => method switch
+    {
+        "cash" => "Tiền mặt",
+        "card" => "Thẻ",
+        "bank_transfer" => "Chuyển khoản",
+        "e-wallet" => "Ví điện tử",
+        _ => method
+    };
 }
