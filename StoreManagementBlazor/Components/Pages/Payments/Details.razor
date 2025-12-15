@@ -1,4 +1,5 @@
 @page "/payments/details/{PaymentId:int}"
+@rendermode InteractiveServer
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject PaymentsService PaymentsService
@@ -6,62 +7,89 @@
 
 <PageTitle>Chi tiết thanh toán #@PaymentId</PageTitle>
 
-@if (Payment == null && !IsLoading)
-{
-    <div class="alert alert-danger">Không tìm thấy giao dịch thanh toán #@PaymentId.</div>
-}
-else if (IsLoading)
+@if (IsLoading)
 {
     <p><em>Đang tải dữ liệu...</em></p>
+}
+else if (Payment == null)
+{
+    <div class="alert alert-danger">
+        Không tìm thấy giao dịch thanh toán #@PaymentId.
+    </div>
 }
 else
 {
     <div class="card shadow-lg border-0">
         <div class="card-header bg-success text-white">
             <h3 class="mb-0">
-                Thanh toán #@Payment!.PaymentId
-                <span class="badge bg-light text-success fs-5 ms-2">@Payment.PaymentMethod</span>
+                Thanh toán #@Payment.PaymentId
+                <span class="badge bg-light text-success fs-6 ms-2">
+                    @DisplayPaymentMethod(Payment.PaymentMethod)
+                </span>
             </h3>
         </div>
+
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
                     <h5>Thông tin thanh toán</h5>
-                    <hr>
-                    <p><strong>Số tiền:</strong> <span class="text-danger fs-4">@Payment.Amount.ToString("N0") ₫</span></p>
-                    <p><strong>Phương thức:</strong> <span class="badge bg-primary">@Payment.PaymentMethod</span></p>
+                    <hr />
+                    <p>
+                        <strong>Số tiền:</strong>
+                        <span class="text-danger fs-4">
+                            @Payment.Amount.ToString("N0") ₫
+                        </span>
+                    </p>
+                    <p><strong>Phương thức:</strong> @DisplayPaymentMethod(Payment.PaymentMethod)</p>
                     <p><strong>Thời gian:</strong> @Payment.PaymentDate.ToString("dd/MM/yyyy HH:mm")</p>
                 </div>
+
                 <div class="col-md-6">
                     <h5>Đơn hàng liên kết</h5>
-                    <hr>
+                    <hr />
                     <p><strong>Mã đơn:</strong> #@Payment.OrderId</p>
                     <p><strong>Khách hàng:</strong> @(Payment.Order?.Customer?.Name ?? "Khách lẻ")</p>
-                    <p><strong>Tổng tiền đơn:</strong> <span class="text-danger">@Payment.Order?.TotalAmount?.ToString("N0") ₫</span></p>
-                    <a href="/orders/@Payment.OrderId" class="btn btn-primary mt-3">
+                    <p>
+                        <strong>Tổng tiền:</strong>
+                        @Payment.Order?.TotalAmount?.ToString("N0") ₫
+                    </p>
+
+                    <!-- ROUTE CHUẨN -->
+                    <a class="btn btn-primary mt-3"
+                       href="/orders/details/@Payment.OrderId">
                         Xem chi tiết đơn hàng
                     </a>
                 </div>
             </div>
         </div>
+
         <div class="card-footer text-center">
-            <a href="/payments" class="btn btn-secondary">Quay lại danh sách</a>
-            <a href="/payments/delete/@Payment.PaymentId" class="btn btn-danger ms-2">Xóa Thanh toán</a>
+            <a href="/payments" class="btn btn-secondary">Quay lại</a>
+            <a href="/payments/delete/@Payment.PaymentId" class="btn btn-danger ms-2">
+                Xóa thanh toán
+            </a>
         </div>
     </div>
 }
 
 @code {
-    [Parameter]
-    public int PaymentId { get; set; }
+    [Parameter] public int PaymentId { get; set; }
 
     private Payment? Payment;
     private bool IsLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        IsLoading = true;
         Payment = await PaymentsService.GetPaymentDetailsAsync(PaymentId);
         IsLoading = false;
     }
+
+    private static string DisplayPaymentMethod(string method) => method switch
+    {
+        "cash" => "Tiền mặt",
+        "card" => "Thẻ",
+        "bank_transfer" => "Chuyển khoản",
+        "e-wallet" => "Ví điện tử",
+        _ => method
+    };
 }
