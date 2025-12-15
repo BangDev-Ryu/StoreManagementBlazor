@@ -1,0 +1,154 @@
+﻿@page "/customers/edit/{CustomerId:int}"
+@using Microsoft.AspNetCore.Components.Forms
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject CustomerService CustomerService
+@inject Blazored.Toast.Services.IToastService toast
+@inject NavigationManager NavigationManager
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light text-center py-3 px-4">
+            <h4 class="mb-0">Chỉnh sửa khách hàng #@Customer.CustomerId</h4>
+        </div>
+        <div class="card-body">
+            @if (IsLoading)
+            {
+                <p><em>Đang tải...</em></p>
+            }
+            else if (Customer != null)
+            {
+                <EditForm Model="@Customer" OnValidSubmit="HandleValidSubmit" FormName="CustomerEditForm">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <input type="hidden" @bind-value="Customer.CustomerId" />
+
+                    <div class="form-group row mb-3">
+                        <label for="Name" class="col-sm-2 col-form-label fw-semibold">Tên khách hàng</label>
+                        <div class="col-sm-10">
+                            <InputText id="Name" @bind-Value="Customer.Name" class="form-control" />
+                            <ValidationMessage For="@(() => Customer.Name)" class="text-danger" />
+                        </div>
+                    </div>
+
+                    <div class="form-group row mb-3">
+                        <label for="Phone" class="col-sm-2 col-form-label fw-semibold">Số điện thoại</label>
+                        <div class="col-sm-10">
+                            <InputText id="Phone" @bind-Value="Customer.Phone" class="form-control" />
+                            <ValidationMessage For="@(() => Customer.Phone)" class="text-danger" />
+                        </div>
+                    </div>
+
+                    <div class="form-group row mb-3">
+                        <label for="Email" class="col-sm-2 col-form-label fw-semibold">Email</label>
+                        <div class="col-sm-10">
+                            <InputText id="Email" @bind-Value="Customer.Email" class="form-control" />
+                            <ValidationMessage For="@(() => Customer.Email)" class="text-danger" />
+                        </div>
+                    </div>
+
+                    <div class="form-group row mb-3">
+                        <label for="Address" class="col-sm-2 col-form-label fw-semibold">Địa chỉ</label>
+                        <div class="col-sm-10">
+                            <InputTextArea id="Address" @bind-Value="Customer.Address" class="form-control" rows="3" />
+                            <ValidationMessage For="@(() => Customer.Address)" class="text-danger" />
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-10 offset-sm-2">
+                            <a href="/customers" class="btn btn-secondary">Quay lại</a>
+                            <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                                @(IsSaving ? "Đang lưu..." : "Lưu")
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            }
+            else
+            {
+                <div class="alert alert-warning">Không tìm thấy khách hàng.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+
+    private Customer Customer = new Customer();
+    private bool IsLoading = true;
+    private bool IsSaving = false;
+    private string Message = string.Empty;
+    private bool Success = false;
+
+    // Thay thế ViewData["Title"]
+    // Thay thế @section Scripts
+    // Thay thế @Html.AntiForgeryToken() - Blazor tự xử lý trong EditForm
+    // Thay thế asp-action, asp-for, asp-validation-for bằng các Blazor component và binding
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomer();
+    }
+
+    private async Task LoadCustomer()
+    {
+        IsLoading = true;
+        Customer? loadedCustomer = await CustomerService.GetById(CustomerId);
+
+        if (loadedCustomer != null)
+        {
+            Customer = loadedCustomer;
+        }
+        else
+        {
+            // Xử lý trường hợp không tìm thấy khách hàng nếu cần
+            Customer = null;
+        }
+
+        IsLoading = false;
+    }
+
+    // Đã được cập nhật:
+    private async Task HandleValidSubmit()
+    {
+        IsSaving = true;
+        // Message = string.Empty; // Có thể xóa dòng này
+
+        try
+        {
+            // Gọi phương thức Update trong CustomerService
+            var result = await CustomerService.Update(Customer);
+
+            // Success = result.success; // Có thể xóa dòng này
+            // Message = result.message; // Có thể xóa dòng này
+
+            if (result.success)
+            {
+                // HIỂN THỊ TOAST THÔNG BÁO THÀNH CÔNG VÀ CHUYỂN HƯỚNG
+                toast.ShowSuccess(result.message);
+
+                // Không cần Task.Delay, chuyển hướng ngay lập tức.
+                NavigationManager.NavigateTo("/customers");
+            }
+            else
+            {
+                // HIỂN THỊ TOAST THÔNG BÁO THẤT BẠI
+                toast.ShowError(result.message);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Xử lý lỗi nếu có lỗi ngoại lệ từ service
+            toast.ShowError($"Lỗi hệ thống: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+            // StateHasChanged(); // Không cần thiết vì chúng ta đã chuyển hướng/hiển thị toast
+        }
+    }
+}
