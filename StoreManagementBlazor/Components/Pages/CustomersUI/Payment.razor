@@ -1,0 +1,257 @@
+@page "/payment"
+@rendermode InteractiveServer
+@using Blazored.Toast.Services
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using StoreManagementBlazor.Services
+@inject AuthenticationStateProvider AuthStateProvider
+@inject CartService CartService
+@inject PromotionService PromotionService
+@inject IToastService ToastService
+@inject NavigationManager NavManager
+
+@attribute [Authorize]
+
+<PageTitle>Thanh toán</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-credit-card-2-front"></i> Thanh toán</h5>
+                </div>
+                <div class="card-body">
+                    @if (IsLoading)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                            <p class="mt-2">Đang tải thông tin...</p>
+                        </div>
+                    }
+                    else if (CurrentUserName == null)
+                    {
+                        <div class="alert alert-danger">Không tìm thấy thông tin người dùng.</div>
+                    }
+                    else
+                    {
+                        <!-- Thông tin khách hàng + ngày thanh toán -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Khách hàng</label>
+                                <input class="form-control" value="@CurrentUserName" disabled />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Ngày thanh toán</label>
+                                <input class="form-control" value="@DateNow.ToString("dd/MM/yyyy")" disabled />
+                            </div>
+                        </div>
+
+                        <!-- Mã giảm giá -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <input class="form-control" placeholder="Nhập mã giảm giá" @bind="promoCode" />
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-primary w-100" @onclick="ApplyPromotion">Áp dụng</button>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(promoMessage))
+                        {
+                            <div class="alert alert-info py-2">@promoMessage</div>
+                        }
+
+                        <!-- Bảng sản phẩm -->
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Sản phẩm</th>
+                                        <th>Giá</th>
+                                        <th>Số lượng</th>
+                                        <th>Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        int i = 1;
+                                        foreach (var item in CartService.Items)
+                                        {
+                                            <tr>
+                                                <td>@i</td>
+                                                <td>@item.Product?.ProductName</td>
+                                                <td>@item.Price.ToString("N0") đ</td>
+                                                <td>@item.Quantity</td>
+                                                <td>@item.Subtotal.ToString("N0") đ</td>
+                                            </tr>
+                                            i++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Tổng tiền -->
+                        <table class="table">
+                            <tr>
+                                <td class="text-end fw-bold">Tổng tiền hàng:</td>
+                                <td class="text-end">@TotalAmount.ToString("N0") đ</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">Giảm giá:</td>
+                                <td class="text-end text-success">-@DiscountAmount.ToString("N0") đ</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td class="text-end fw-bold">Tổng thanh toán:</td>
+                                <td class="text-end fw-bold text-danger">@FinalAmount.ToString("N0") đ</td>
+                            </tr>
+                        </table>
+
+                        <!-- Nút thao tác -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button class="btn btn-secondary" @onclick="BackToCart">Quay lại giỏ hàng</button>
+                            <button class="btn btn-primary" @onclick="ShowConfirmModalFunc">Thanh toán</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận thanh toán -->
+@if (ShowConfirmModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Xác nhận thanh toán</h5>
+                    <button type="button" class="btn-close" @onclick="CloseConfirmModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn thanh toán đơn hàng với tổng <strong>@FinalAmount.ToString("N0") đ</strong> không?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseConfirmModal">Hủy</button>
+                    <button class="btn btn-primary" @onclick="ProceedPayment">Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string? CurrentUserName;
+    private string? UserId;
+    private string promoCode = "";
+    private string promoMessage = "";
+    private decimal DiscountAmount = 0;
+    private bool IsLoading = true;
+    private DateTime DateNow = DateTime.Now;
+
+    private bool ShowConfirmModal = false;
+
+    private decimal TotalAmount => CartService.TotalAmount;
+    private decimal FinalAmount => TotalAmount - DiscountAmount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            CurrentUserName = user.FindFirst("FullName")?.Value ?? user.Identity.Name ?? "Khách hàng";
+            UserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                     ?? user.FindFirst("UserId")?.Value 
+                     ?? "N/A";
+        }
+        else
+        {
+            CurrentUserName = "Khách hàng";
+            UserId = "N/A";
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task ApplyPromotion()
+    {
+        DiscountAmount = 0;
+        promoMessage = "";
+
+        var promo = await PromotionService.GetPromoByCode(promoCode);
+
+        if (promo == null)
+        {
+            promoMessage = "Mã giảm giá không hợp lệ";
+            return;
+        }
+
+        var now = DateTime.Now.Date;
+        if (now < promo.StartDate.Date || now > promo.EndDate.Date)
+        {
+            promoMessage = "Mã giảm giá chưa có hiệu lực hoặc đã hết hạn";
+            return;
+        }
+
+        if (promo.MinOrderAmount.HasValue && TotalAmount < promo.MinOrderAmount.Value)
+        {
+            promoMessage = $"Đơn hàng phải ≥ {promo.MinOrderAmount:N0}đ để áp dụng mã này";
+            return;
+        }
+
+        if (promo.Status != "active")
+        {
+            promoMessage = "Mã giảm giá hiện không khả dụng";
+            return;
+        }
+
+        if (promo.UsageLimit.HasValue && promo.UsedCount.HasValue &&
+            promo.UsageLimit > 0 && promo.UsedCount >= promo.UsageLimit)
+        {
+            promoMessage = "Mã giảm giá đã hết số lần sử dụng";
+            return;
+        }
+
+        if (promo.DiscountType == "percent")
+        {
+            DiscountAmount = TotalAmount * (promo.DiscountValue.Value / 100);
+            promoMessage = $"Áp dụng mã {promo.PromoCode} giảm {promo.DiscountValue}%";
+        }
+        else if (promo.DiscountType == "fixed")
+        {
+            DiscountAmount = promo.DiscountValue.Value;
+            promoMessage = $"Áp dụng mã {promo.PromoCode} giảm {DiscountAmount:N0} đ";
+        }
+
+        if (DiscountAmount > TotalAmount)
+            DiscountAmount = TotalAmount;
+    }
+
+    private void ShowConfirmModalFunc()
+    {
+        ShowConfirmModal = true;
+    }
+
+    private void CloseConfirmModal()
+    {
+        ShowConfirmModal = false;
+    }
+
+    private void ProceedPayment()
+    {
+        ShowConfirmModal = false;
+        ToastService.ShowSuccess("Thanh toán thành công!");
+        // Ví dụ: reset giỏ hàng hoặc chuyển trang
+        // NavManager.NavigateTo("/thank-you");
+    }
+
+    private void BackToCart() => NavManager.NavigateTo("/cart");
+}
