@@ -26,14 +26,14 @@
                     </NavLink>
                 </div>
 
-                <AuthorizeView>
+                <AuthorizeView Roles="admin, staff">
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="promotions">
-                            <span class="bi bi-ticket-perforated-fill-nav-menu" aria-hidden="true"></span> Khuyến mãi
+                        <NavLink class="nav-link" href="admin/products">
+                            <span class="bi bi-box-seam-fill-nav-menu" aria-hidden="true"></span> Sản phẩm
                         </NavLink>
                     </div>
                 </AuthorizeView>
-                
+
                 <AuthorizeView Roles="admin, staff">
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="orders">
@@ -44,13 +44,28 @@
 
                 <AuthorizeView Roles="admin, staff">
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/products">
-                            <span class="bi bi-box-seam-fill-nav-menu" aria-hidden="true"></span> Sản phẩm
+                        <NavLink class="nav-link" href="promotions">
+                            <span class="bi bi-ticket-perforated-fill-nav-menu" aria-hidden="true"></span> Khuyến mãi
                         </NavLink>
                     </div>
-
+                </AuthorizeView>
+                
+                <AuthorizeView Roles="admin, staff">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/suppliers">
+                            <span class="bi bi-people-fill" aria-hidden="true"></span> Nhà cung cấp
+                        </NavLink>
+                    </div>
                 </AuthorizeView>
 
+                <AuthorizeView Roles="admin, staff">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin/categories">
+                            <span class="bi bi-people-fill" aria-hidden="true"></span> Danh mục
+                        </NavLink>
+                    </div>
+                </AuthorizeView>
+                
                 <AuthorizeView Roles="admin">
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="users">
@@ -59,34 +74,28 @@
                     </div>
                 </AuthorizeView>
 
-                
-
-                <div class="nav-item px-3">
-                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/suppliers">
-                        <span class="bi bi-people-fill" aria-hidden="true"></span> Nhà cung cấp
+                <AuthorizeView Roles="customer">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/shopping">
+                            <span class="bi bi-people-fill" aria-hidden="true"></span> Mua sắm
                         </NavLink>
-                </div>
+                    </div>
+                </AuthorizeView>
 
-                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/categories">
-                        <span class="bi bi-people-fill" aria-hidden="true"></span> Danh mục
-                    </NavLink>
-                </div>
+                <AuthorizeView Roles="customer">
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="/cart">
+                            <span class="bi bi-people-fill" aria-hidden="true"></span> Giỏ hàng
+                        </NavLink>
+                    </div>
+                </AuthorizeView>
+                @* <AuthorizeView Roles="customer"></AuthorizeView> *@
 
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/shopping">
-                        <span class="bi bi-people-fill" aria-hidden="true"></span> Mua sắm
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3 mt-4">
                     <NavLink class="nav-link" href="my-profile">
                         <span class="bi bi-person-circle" aria-hidden="true"></span> Thông tin cá nhân
                     </NavLink>
                 </div>
-
-                
 
                 <div class="nav-item px-3">
                     <a class="nav-link" href="/logout">
@@ -94,16 +103,6 @@
                     </a>
                 </div>
             </Authorized>
-            
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="login">
-                        <span class="bi bi-person-badge" aria-hidden="true"></span> Đăng nhập
-                    </NavLink>
-                </div>
-            </NotAuthorized>
-
-            
         </AuthorizeView>
 
     </nav>
