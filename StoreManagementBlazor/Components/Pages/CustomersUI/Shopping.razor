@@ -2,13 +2,21 @@
 @rendermode InteractiveServer
 @inject ProductService ProductService
 @inject NavigationManager Nav
+@inject CartService CartService
 
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Danh sách sản phẩm</h5>
-        <button class="btn btn-primary"
+
+        <button class="btn btn-primary position-relative"
                 @onclick="@(() => Nav.NavigateTo("/cart"))">
             Giỏ hàng
+            @if (CartService.Items.Any())
+            {
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                    @CartService.Items.Sum(x => x.Quantity)
+                </span>
+            }
         </button>
     </div>
 
@@ -24,8 +32,7 @@
             </div>
 
             <div class="col-md-3">
-                <select class="form-select"
-                        @bind="selectedCategoryId">
+                <select class="form-select" @bind="selectedCategoryId">
                     <option value="">-- Danh mục --</option>
                     @foreach (var c in categoryMap)
                     {
@@ -35,16 +42,14 @@
             </div>
 
             <div class="col-md-2">
-                <input type="number"
-                       class="form-control"
+                <input type="number" class="form-control"
                        placeholder="Giá từ"
                        @bind="minPrice"
                        @bind:event="oninput" />
             </div>
 
             <div class="col-md-2">
-                <input type="number"
-                       class="form-control"
+                <input type="number" class="form-control"
                        placeholder="Giá đến"
                        @bind="maxPrice"
                        @bind:event="oninput" />
@@ -64,6 +69,7 @@
                 <tr>
                     <th style="width:60px">STT</th>
                     <th>Tên</th>
+                    <th>Mã</th>
                     <th>Danh mục</th>
                     <th>Giá</th>
                     <th>Đơn vị</th>
@@ -79,16 +85,16 @@
                         <tr>
                             <td>@i</td>
                             <td>@p.ProductName</td>
+                            <td>@p.ProductId</td>
                             <td>@GetCategoryName(p.CategoryId)</td>
                             <td>@p.Price.ToString("N0") đ</td>
                             <td>@p.Unit</td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-warning"
-                                        @onclick="() => AddToCart(p)">
+                                        @onclick="() => OpenModal(p)">
                                     ➕
                                 </button>
-                            </td>   
-
+                            </td>
                         </tr>
                         i++;
                     }
@@ -105,48 +111,65 @@
         </table>
 
         <!-- PAGINATION -->
-        <nav aria-label="Page navigation">
+        <nav>
             <ul class="pagination justify-content-center">
                 <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
-                    <button type="button" class="page-link"
+                    <button class="page-link"
                             @onclick="() => ChangePage(currentPage - 1)">
-                        &laquo; Prev
+                        &laquo;
                     </button>
                 </li>
 
                 @for (int i = 1; i <= totalPages; i++)
                 {
-                    int pageNumber = i;
-                    if (pageNumber == 1 || pageNumber == totalPages ||
-                        (pageNumber >= currentPage - 2 && pageNumber <= currentPage + 2))
-                    {
-                        <li class="page-item @(pageNumber == currentPage ? "active" : "")">
-                            <button type="button" class="page-link"
-                                    @onclick="() => ChangePage(pageNumber)">
-                                @pageNumber
-                            </button>
-                        </li>
-                    }
-                    else if (pageNumber == currentPage - 3 && currentPage > 4)
-                    {
-                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                    }
-                    else if (pageNumber == currentPage + 3 && currentPage < totalPages - 3)
-                    {
-                        <li class="page-item disabled"><span class="page-link">...</span></li>
-                    }
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <button class="page-link"
+                                @onclick="() => ChangePage(i)">
+                            @i
+                        </button>
+                    </li>
                 }
 
                 <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
-                    <button type="button" class="page-link"
+                    <button class="page-link"
                             @onclick="() => ChangePage(currentPage + 1)">
-                        Next &raquo;
+                        &raquo;
                     </button>
                 </li>
             </ul>
         </nav>
     </div>
 </div>
+
+<!-- MODAL CHỌN SỐ LƯỢNG -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chọn số lượng</h5>
+                    <button class="btn-close" @onclick="CloseModal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="fw-bold">@selectedProduct?.ProductName</p>
+                    <input type="number"
+                           class="form-control"
+                           min="1"
+                           @bind="selectedQuantity" />
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
+                    <button class="btn btn-success" @onclick="ConfirmAddToCart">
+                        Thêm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     List<Product> products = new();
@@ -156,10 +179,13 @@
     decimal? minPrice, maxPrice;
     int? selectedCategoryId;
 
-    // Pagination
     int currentPage = 1;
     int pageSize = 10;
     int totalPages => (int)Math.Ceiling((double)FilteredProducts.Count() / pageSize);
+
+    Product? selectedProduct;
+    int selectedQuantity = 1;
+    bool showModal = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -199,13 +225,25 @@
     }
 
     string GetCategoryName(int? id)
-        => id.HasValue && categoryMap.ContainsKey(id.Value) ? categoryMap[id.Value] : "";
+        => id.HasValue && categoryMap.ContainsKey(id.Value)
+            ? categoryMap[id.Value]
+            : "";
 
-    [Inject] CartService CartService { get; set; } = null!;
-
-    void AddToCart(Product product)
+    void OpenModal(Product product)
     {
-        CartService.AddProduct(product, 1); 
+        selectedProduct = product;
+        selectedQuantity = 1;
+        showModal = true;
     }
 
+    void CloseModal() => showModal = false;
+
+    void ConfirmAddToCart()
+    {
+        if (selectedProduct != null)
+        {
+            CartService.AddProduct(selectedProduct, selectedQuantity);
+        }
+        showModal = false;
+    }
 }

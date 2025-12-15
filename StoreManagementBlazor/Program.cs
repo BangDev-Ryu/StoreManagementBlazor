@@ -49,7 +49,10 @@ builder.Services.AddScoped<OrdersService>(); // <-- Đã thêm
 builder.Services.AddScoped<PaymentsService>(); // <-- Đã thêm
 builder.Services.AddScoped<SupplierService>();
 builder.Services.AddScoped<CategoryService>();
-builder.Services.AddSingleton<CartService>();
+builder.Services.AddScoped<CartService>();
+
+
+
 
 
 builder.Services.AddBlazoredToast();
