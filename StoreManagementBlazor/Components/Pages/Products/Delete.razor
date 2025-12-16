@@ -1,4 +1,4 @@
-﻿@page "/admin/products/delete/{id:int}"
+﻿@page "/products/delete/{id:int}"
 @rendermode InteractiveServer
 @inject ProductService ProductService
 @inject NavigationManager Nav
@@ -26,7 +26,7 @@
                     Xóa
                 </button>
                 <button class="btn btn-secondary ms-2"
-                        @onclick="@(() => Nav.NavigateTo("/admin/products"))">
+                        @onclick="@(() => Nav.NavigateTo("/products"))">
                     Hủy
                 </button>
             </div>
@@ -46,6 +46,6 @@
     async Task ConfirmDelete()
     {
         await ProductService.DeleteAsync(product!.ProductId);
-        Nav.NavigateTo("/admin/products");
+        Nav.NavigateTo("/products");
     }
 }

@@ -1,4 +1,4 @@
-@page "/admin/categories/create"
+@page "/categories/create"
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject CategoryService CategoryService
@@ -13,7 +13,7 @@
     <h1 class="mt-4">Tạo danh mục</h1>
 
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/admin/categories">Danh mục</a></li>
+        <li class="breadcrumb-item"><a href="/categories">Danh mục</a></li>
         <li class="breadcrumb-item active">Tạo danh mục</li>
     </ol>
 
@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="mt-4 d-flex justify-content-end gap-2">
-                    <a href="/admin/categories" class="btn btn-outline-secondary px-4">Hủy</a>
+                    <a href="/categories" class="btn btn-outline-secondary px-4">Hủy</a>
                     <button type="submit" class="btn btn-primary px-4">Lưu</button>
                 </div>
             </EditForm>
@@ -64,6 +64,6 @@
 
         toastService.ShowSuccess(result.message);
         await Task.Delay(1000);
-        Navigation.NavigateTo("/admin/categories");
+        Navigation.NavigateTo("/categories");
     }
 }

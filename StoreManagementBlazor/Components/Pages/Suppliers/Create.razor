@@ -1,4 +1,4 @@
-@page "/admin/suppliers/create"
+@page "/suppliers/create"
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject SupplierService SupplierService
@@ -13,7 +13,7 @@
     <h1 class="mt-4">Tạo nhà cung cấp</h1>
 
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/admin/suppliers">Nhà cung cấp</a></li>
+        <li class="breadcrumb-item"><a href="/suppliers">Nhà cung cấp</a></li>
         <li class="breadcrumb-item active">Tạo nhà cung cấp</li>
     </ol>
 
@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="mt-4 d-flex justify-content-end gap-2">
-                    <a href="/admin/suppliers" class="btn btn-outline-secondary px-4">Hủy</a>
+                    <a href="/suppliers" class="btn btn-outline-secondary px-4">Hủy</a>
                     <button type="submit" class="btn btn-primary px-4">Lưu</button>
                 </div>
             </EditForm>
@@ -76,6 +76,6 @@
 
         toastService.ShowSuccess(result.message);
         await Task.Delay(1000);
-        Navigation.NavigateTo("/admin/suppliers");
+        Navigation.NavigateTo("/suppliers");
     }
 }

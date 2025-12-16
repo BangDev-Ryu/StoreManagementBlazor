@@ -1,17 +1,22 @@
-@page "/admin/suppliers"
-@inject SupplierService SupplierService
+@page "/categories"
+@using StoreManagementBlazor.Models
+@using StoreManagementBlazor.Services
+@inject CategoryService CategoryService
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
+@inject Blazored.Toast.Services.IToastService toastService
+
 @rendermode InteractiveServer
 
-<PageTitle>Nhà cung cấp</PageTitle>
+<PageTitle>Danh mục</PageTitle>
 
-<div class="container-fluid mt-3">
-    <h2>Quản lý nhà cung cấp</h2>
+<div class="container-fluid mt-3" style="user-select:none;">
+    <h2>Quản lý danh mục</h2>
 
     <div class="row w-100 g-3 align-items-end mb-3">
         <div class="col-md-3">
             <label class="form-label">Tìm kiếm</label>
-            <input class="form-control" placeholder="Nhà cung cấp..."
+            <input class="form-control" placeholder="Tên danh mục..."
                    @bind="searchText" @oninput="OnSearchInput" />
         </div>
 
@@ -31,7 +36,7 @@
     </div>
 
     <p>
-        <NavLink class="btn btn-primary" href="/admin/suppliers/create">Thêm nhà cung cấp</NavLink>
+        <NavLink class="btn btn-primary" href="/categories/create">Tạo danh mục</NavLink>
     </p>
 
     <div class="table-responsive">
@@ -39,35 +44,28 @@
             <thead class="table-light">
                 <tr>
                     <th>STT</th>
-                    <th>Tên nhà cung cấp</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Địa chỉ</th>
+                    <th>Tên danh mục</th>
                     <th class="text-center">Hành động</th>
                 </tr>
             </thead>
             <tbody>
-                @if (pagedSuppliers == null || !pagedSuppliers.Any())
+                @if (pagedCategories == null || !pagedCategories.Any())
                 {
                     <tr>
-                        <td colspan="6" class="text-center text-muted">Không có dữ liệu</td>
+                        <td colspan="3" class="text-center text-muted">Không có dữ liệu</td>
                     </tr>
                 }
                 else
                 {
                     int stt = (currentPage - 1) * pageSize + 1;
-                    foreach (var s in pagedSuppliers)
+                    foreach (var c in pagedCategories)
                     {
                         <tr>
                             <td>@stt</td>
-                            <td>@s.Name</td>
-                            <td>@s.Phone</td>
-                            <td>@s.Email</td>
-                            <td>@s.Address</td>
+                            <td>@c.CategoryName</td>
                             <td class="text-center">
-                                <NavLink class="btn btn-info" href="@($"/admin/suppliers/details/{s.SupplierId}")">Chi tiết</NavLink>
-                                <NavLink class="btn btn-warning" href="@($"/admin/suppliers/edit/{s.SupplierId}")">Sửa</NavLink>
-                                <NavLink class="btn btn-danger" href="@($"/admin/suppliers/delete/{s.SupplierId}")">Xóa</NavLink>
+                                <NavLink class="btn btn-warning me-1" href="@($"/categories/edit/{c.CategoryId}")">Sửa</NavLink>
+                                <button class="btn btn-danger me-1" @onclick="() => ConfirmDelete(c.CategoryId, c.CategoryName)">Xóa</button>
                             </td>
                         </tr>
                         stt++;
@@ -129,10 +127,13 @@
 
         </ul>
     </nav>
+    @*  *@
+
+    
 </div>
 
 @code {
-    private List<Supplier> pagedSuppliers = new();
+    private List<Category> pagedCategories = new();
     private string searchText = "";
     private int currentPage = 1;
     private int pageSize = 5;
@@ -160,8 +161,8 @@
 
     private async Task LoadData()
     {
-        var result = await SupplierService.GetPagedAsync(currentPage, pageSize, searchText);
-        pagedSuppliers = result.Suppliers;
+        var result = await CategoryService.GetPagedAsync(currentPage, pageSize, searchText);
+        pagedCategories = result.Categories;
         totalCount = result.TotalCount;
         totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
         if (totalPages < 1) totalPages = 1;
@@ -199,4 +200,41 @@
         currentPage = 1;
         await LoadData();
     }
+
+    private async Task DeleteCategory(int id)
+    {
+        var result = await CategoryService.DeleteAsync(id);
+        if (result.success)
+        {
+            toastService.ShowSuccess(result.message);
+            await LoadData();
+        }
+        else
+        {
+            toastService.ShowError(result.message);
+        }
+    }
+
+    private async Task ConfirmDelete(int id, string categoryName)
+{
+    // Hiển thị confirm popup
+    bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Bạn có chắc chắn muốn xóa danh mục '{categoryName}'?");
+
+    if (!confirmed)
+        return;
+
+    // Xóa category
+    var result = await CategoryService.DeleteAsync(id);
+
+    if (result.success)
+    {
+        toastService.ShowSuccess(result.message);
+        await LoadData(); // reload lại danh sách
+    }
+    else
+    {
+        toastService.ShowError(result.message);
+    }
+}
+
 }

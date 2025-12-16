@@ -1,4 +1,4 @@
-@page "/admin/categories/edit/{Id:int}"
+@page "/categories/edit/{Id:int}"
 @using StoreManagementBlazor.Models
 @using StoreManagementBlazor.Services
 @inject CategoryService CategoryService
@@ -12,7 +12,7 @@
     <h1 class="mt-4">Sửa danh mục</h1>
 
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/admin/categories">Danh mục</a></li>
+        <li class="breadcrumb-item"><a href="/categories">Danh mục</a></li>
         <li class="breadcrumb-item active">Sửa danh mục</li>
     </ol>
 
@@ -45,7 +45,7 @@
                     </div>
 
                     <div class="mt-4 d-flex justify-content-end gap-2">
-                        <a href="/admin/categories" class="btn btn-outline-secondary px-4">Hủy</a>
+                        <a href="/categories" class="btn btn-outline-secondary px-4">Hủy</a>
                         <button type="submit" class="btn btn-primary px-4">Lưu thay đổi</button>
                     </div>
                 </EditForm>
@@ -66,7 +66,7 @@
 
         if (category == null)
         {
-            Navigation.NavigateTo("/admin/categories");
+            Navigation.NavigateTo("/categories");
         }
     }
 
@@ -90,6 +90,6 @@
 
         toastService.ShowSuccess(result.message);
         await Task.Delay(1000);
-        Navigation.NavigateTo("/admin/categories");
+        Navigation.NavigateTo("/categories");
     }
 }

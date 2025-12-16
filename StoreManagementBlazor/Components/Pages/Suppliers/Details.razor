@@ -1,4 +1,4 @@
-@page "/admin/suppliers/details/{id:int}"
+@page "/suppliers/details/{id:int}"
 @rendermode InteractiveServer
 @inject SupplierService SupplierService
 @inject NavigationManager Nav
@@ -31,7 +31,7 @@
 
             <div class="text-end">
                 <button class="btn btn-secondary"
-                        @onclick="@(() => Nav.NavigateTo("/admin/suppliers"))">
+                        @onclick="@(() => Nav.NavigateTo("/suppliers"))">
                     Quay lại
                 </button>
             </div>
@@ -50,7 +50,7 @@
         if (supplier == null)
         {
             // Nếu không tìm thấy, quay về danh sách
-            Nav.NavigateTo("/admin/suppliers");
+            Nav.NavigateTo("/suppliers");
         }
     }
 }

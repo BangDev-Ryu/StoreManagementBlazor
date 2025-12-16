@@ -1,4 +1,4 @@
-﻿@page "/admin/products"
+﻿@page "/products"
 @rendermode InteractiveServer
 @inject ProductService ProductService
 @inject NavigationManager Nav
@@ -7,7 +7,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">📦 Danh sách sản phẩm</h5>
         <button class="btn btn-primary"
-                @onclick="@(() => Nav.NavigateTo("/admin/products/create"))">
+                @onclick="@(() => Nav.NavigateTo("/products/create"))">
             ➕ Thêm sản phẩm
         </button>
     </div>
@@ -113,15 +113,15 @@
                             <td>@GetSupplierName(p.SupplierId)</td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-outline-warning me-1"
-                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/edit/{p.ProductId}"))">
+                                        @onclick="@(() => Nav.NavigateTo($"/products/edit/{p.ProductId}"))">
                                     Sửa
                                 </button>
                                 <button class="btn btn-sm btn-outline-info me-1"
-                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/details/{p.ProductId}"))">
+                                        @onclick="@(() => Nav.NavigateTo($"/products/details/{p.ProductId}"))">
                                     Xem
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger"
-                                        @onclick="@(() => Nav.NavigateTo($"/admin/products/delete/{p.ProductId}"))">
+                                        @onclick="@(() => Nav.NavigateTo($"/products/delete/{p.ProductId}"))">
                                     Xóa
                                 </button>
                             </td>

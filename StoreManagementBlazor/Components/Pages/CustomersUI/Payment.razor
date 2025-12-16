@@ -199,12 +199,12 @@
             return;
         }
 
-        if (promo.DiscountType == "percent")
+        if (promo.DiscountType == "percent" && promo.DiscountValue.HasValue)
         {
             DiscountAmount = TotalAmount * (promo.DiscountValue.Value / 100);
             promoMessage = $"Áp dụng mã {promo.PromoCode} giảm {promo.DiscountValue}%";
         }
-        else if (promo.DiscountType == "fixed")
+        else if (promo.DiscountType == "fixed" && promo.DiscountValue.HasValue)
         {
             DiscountAmount = promo.DiscountValue.Value;
             promoMessage = $"Áp dụng mã {promo.PromoCode} giảm {DiscountAmount:N0} đ";
