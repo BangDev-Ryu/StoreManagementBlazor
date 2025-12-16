@@ -13,54 +13,95 @@
     </div>
 
     <div class="card-body">
-        <!-- SEARCH -->
-        <div class="row g-2 mb-3">
-            <div class="col-md-4">
-                <input class="form-control"
-                       placeholder="🔍 Tìm theo tên / mã vạch"
-                       @bind="search"
-                       @bind:event="oninput" />
-            </div>
-            <div class="col-md-3">
-                <input type="number"
-                       class="form-control"
-                       placeholder="Giá từ"
-                       @bind="minPrice"
-                       @bind:event="oninput" />
-            </div>
-            <div class="col-md-3">
-                <input type="number"
-                       class="form-control"
-                       placeholder="Giá đến"
-                       @bind="maxPrice"
-                       @bind:event="oninput" />
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-secondary w-100"
-                        @onclick="ClearFilter">
-                    Reset
-                </button>
-            </div>
-        </div>
 
+        <!-- ================= SEARCH & FILTER ================= -->
+        <EditForm Model="filter" OnValidSubmit="ApplyFilter">
+            <div class="row g-2 mb-4 align-items-end">
+
+                <div class="col-md-4">
+                    <label class="form-label">Tìm kiếm</label>
+                    <input class="form-control"
+                           placeholder="Tên hoặc mã vạch..."
+                           @bind="filter.Search" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Danh mục</label>
+                    <select class="form-select" @bind="filter.CategoryId">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.CategoryId">@c.CategoryName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Nhà cung cấp</label>
+                    <select class="form-select" @bind="filter.SupplierId">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var s in suppliers)
+                        {
+                            <option value="@s.SupplierId">@s.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Giá từ</label>
+                    <input type="number" class="form-control" @bind="filter.MinPrice" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Giá đến</label>
+                    <input type="number" class="form-control" @bind="filter.MaxPrice" />
+                </div>
+
+                <div class="col-md-12 d-flex gap-2 mt-2">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            disabled="@isLoading">
+                        🔍 @(isLoading ? "Đang lọc..." : "Lọc")
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="ResetFilter"
+                            disabled="@isLoading">
+                        🔄 Reset
+                    </button>
+                </div>
+
+            </div>
+        </EditForm>
+
+        <!-- ================= TABLE ================= -->
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>#</th>
+                    <th style="width:60px">#</th>
                     <th>Tên</th>
                     <th>Mã vạch</th>
                     <th>Giá</th>
                     <th>Đơn vị</th>
                     <th>Danh mục</th>
                     <th>NCC</th>
-                    <th class="text-center">Thao tác</th>
+                    <th class="text-center" style="width:200px">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
-                @if (filtered.Any())
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            ⏳ Đang tải dữ liệu...
+                        </td>
+                    </tr>
+                }
+                else if (products.Any())
                 {
                     int i = 1;
-                    @foreach (var p in filtered)
+                    @foreach (var p in products)
                     {
                         <tr>
                             <td>@i</td>
@@ -102,44 +143,66 @@
 </div>
 
 @code {
+    // ================= FILTER MODEL =================
+    class ProductFilterModel
+    {
+        public string? Search { get; set; }
+        public int? CategoryId { get; set; }
+        public int? SupplierId { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+    }
+
+    ProductFilterModel filter = new();
+
+    // ================= DATA =================
     List<Product> products = new();
-    List<Product> filtered = new();
+    List<Category> categories = new();
+    List<Supplier> suppliers = new();
 
     Dictionary<int, string> categoryMap = new();
     Dictionary<int, string> supplierMap = new();
 
-    string search = "";
-    decimal? minPrice, maxPrice;
+    bool isLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadAll();
+    }
+
+    async Task LoadAll()
+    {
+        isLoading = true;
+
         products = await ProductService.GetAllAsync();
+        categories = await ProductService.GetCategoriesAsync();
+        suppliers = await ProductService.GetSuppliersAsync();
 
-        var categories = await ProductService.GetCategoriesAsync();
         categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
-
-        var suppliers = await ProductService.GetSuppliersAsync();
         supplierMap = suppliers.ToDictionary(x => x.SupplierId, x => x.Name);
 
-        Apply();
+        isLoading = false;
     }
 
-    void Apply()
+    async Task ApplyFilter()
     {
-        filtered = products.Where(p =>
-            (string.IsNullOrWhiteSpace(search)
-                || p.ProductName.Contains(search, StringComparison.OrdinalIgnoreCase)
-                || (p.Barcode != null && p.Barcode.Contains(search))) &&
-            (!minPrice.HasValue || p.Price >= minPrice) &&
-            (!maxPrice.HasValue || p.Price <= maxPrice)
-        ).ToList();
+        isLoading = true;
+
+        products = await ProductService.SearchFilterAsync(
+            filter.Search,
+            filter.CategoryId,
+            filter.SupplierId,
+            filter.MinPrice,
+            filter.MaxPrice
+        );
+
+        isLoading = false;
     }
 
-    void ClearFilter()
+    async Task ResetFilter()
     {
-        search = "";
-        minPrice = maxPrice = null;
-        Apply();
+        filter = new ProductFilterModel();
+        await LoadAll();
     }
 
     string GetCategoryName(int? id)

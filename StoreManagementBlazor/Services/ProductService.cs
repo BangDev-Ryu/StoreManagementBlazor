@@ -37,6 +37,13 @@ namespace StoreManagementBlazor.Services
             try
             {
                 product.CreatedAt = DateTime.Now;
+
+                // 🔥 AUTO GENERATE BARCODE
+                if (string.IsNullOrWhiteSpace(product.Barcode))
+                {
+                    product.Barcode = await GenerateBarcodeAsync();
+                }
+
                 _context.Products.Add(product);
                 await _context.SaveChangesAsync();
                 return true;
@@ -46,6 +53,48 @@ namespace StoreManagementBlazor.Services
                 return false;
             }
         }
+        public async Task<List<Product>> SearchFilterAsync(
+    string? keyword,
+    int? categoryId,
+    int? supplierId,
+    decimal? minPrice,
+    decimal? maxPrice
+)
+        {
+            IQueryable<Product> query = _context.Products;
+
+            // 🔍 Tìm theo tên + barcode
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.ToLower();
+                query = query.Where(p =>
+                    p.ProductName.ToLower().Contains(keyword) ||
+                    (p.Barcode != null && p.Barcode.ToLower().Contains(keyword))
+                );
+            }
+
+            // 📂 Danh mục
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId);
+
+            // 🚚 Nhà cung cấp
+            if (supplierId.HasValue)
+                query = query.Where(p => p.SupplierId == supplierId);
+
+            // 💰 Giá từ
+            if (minPrice.HasValue)
+                query = query.Where(p => p.Price >= minPrice);
+
+            // 💰 Giá đến
+            if (maxPrice.HasValue)
+                query = query.Where(p => p.Price <= maxPrice);
+
+            return await query
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
+
+
 
         // UPDATE PRODUCT
         public async Task<bool> UpdateAsync(Product product)
@@ -128,6 +177,27 @@ namespace StoreManagementBlazor.Services
                 .OrderBy(s => s.Name)
                 .ToListAsync();
         }
+        // ========================
+        // AUTO GENERATE BARCODE
+        // ========================
+        private async Task<string> GenerateBarcodeAsync()
+        {
+            const long START = 8900000000000;
+
+            var barcodes = await _context.Products
+                .Where(p => p.Barcode != null)
+                .Select(p => p.Barcode!)
+                .ToListAsync();
+
+            var maxBarcode = barcodes
+                .Where(b => long.TryParse(b, out _))
+                .Select(long.Parse)
+                .DefaultIfEmpty(START)
+                .Max();
+
+            return (maxBarcode + 1).ToString();
+        }
+
 
         // GET SUPPLIER NAME BY ID (OPTIONAL)
         public async Task<string?> GetSupplierNameAsync(int? supplierId)
