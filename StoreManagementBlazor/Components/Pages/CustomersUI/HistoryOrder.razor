@@ -7,7 +7,6 @@
 @using StoreManagementBlazor.Models.ViewModels
 @using Microsoft.AspNetCore.Authorization
 
-
 @inject OrdersService OrdersService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Nav
@@ -70,8 +69,8 @@
                             <td>#@o.OrderId</td>
                             <td>@o.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
-                                <span class="badge bg-@(o.Status == "completed" ? "success" : "warning")">
-                                    @o.Status
+                                <span class="badge bg-@GetStatusClass(o.Status)">
+                                    @GetStatusText(o.Status)
                                 </span>
                             </td>
                             <td class="text-end">@o.DiscountAmount.ToString("N0") đ</td>
@@ -80,7 +79,7 @@
                             </td>
                             <td class="text-center">
                                 <NavLink class="btn btn-sm btn-info"
-                                         href="@($"/orders/details/{o.OrderId}")">
+                                         href="@($"/orders_details/{o.OrderId}")">
                                     Xem
                                 </NavLink>
                             </td>
@@ -190,5 +189,29 @@
         if (page < 1 || page > totalPages) return;
         currentPage = page;
         await LoadData();
+    }
+
+    // ================== STATUS MAPPING ==================
+
+    private string GetStatusText(string status)
+    {
+        return status switch
+        {
+            "pending" => "Chưa thanh toán",
+            "paid" => "Đã thanh toán",
+            "canceled" => "Đã hủy",
+            _ => status
+        };
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "pending" => "warning",
+            "paid" => "success",
+            "canceled" => "danger",
+            _ => "light"
+        };
     }
 }

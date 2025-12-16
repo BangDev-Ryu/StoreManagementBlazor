@@ -45,7 +45,7 @@ namespace StoreManagementBlazor.Models.ViewModels
     public class OrderListDTO
     {
         public int OrderId { get; set; }
-        public string CustomerName { get; set; } = "Khách lẻ";
+        public string CustomerName { get; set; }
         public DateTime OrderDate { get; set; }
         public string Status { get; set; } = "pending";
         public decimal TotalAmount { get; set; }
@@ -73,7 +73,7 @@ namespace StoreManagementBlazor.Models.ViewModels
     public class OrderDetailsDTO
 {
     public int OrderId { get; set; }
-    public string CustomerName { get; set; } = "Khách lẻ";
+    public string CustomerName { get; set; }
 
     public string? CustomerEmail { get; set; }
     public string? CustomerPhone { get; set; }
