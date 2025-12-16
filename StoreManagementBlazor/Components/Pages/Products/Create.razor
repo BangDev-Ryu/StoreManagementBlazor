@@ -1,11 +1,11 @@
-﻿@page "/admin/products/create"
+﻿@page "/products/create"
 @rendermode InteractiveServer
 @inject ProductService ProductService
 @inject NavigationManager Nav
 
 <div class="card shadow-sm">
     <div class="card-header">
-        <h5>➕ Thêm sản phẩm</h5>
+        <h5>Thêm sản phẩm</h5>
     </div>
 
     <div class="card-body">
@@ -17,11 +17,6 @@
                 <div class="col-md-6">
                     <label>Tên sản phẩm</label>
                     <InputText class="form-control" @bind-Value="product.ProductName" />
-                </div>
-
-                <div class="col-md-6">
-                    <label>Mã vạch</label>
-                    <InputText class="form-control" @bind-Value="product.Barcode" />
                 </div>
 
                 <div class="col-md-4">
@@ -61,7 +56,7 @@
                 <button class="btn btn-primary">Lưu</button>
                 <button type="button"
                         class="btn btn-secondary ms-2"
-                        @onclick="@(() => Nav.NavigateTo("/admin/products"))">
+                        @onclick="@(() => Nav.NavigateTo("/products"))">
                     Quay lại
                 </button>
             </div>
@@ -83,6 +78,6 @@
     async Task Save()
     {
         await ProductService.AddAsync(product);
-        Nav.NavigateTo("/admin/products");
+        Nav.NavigateTo("/products");
     }
 }

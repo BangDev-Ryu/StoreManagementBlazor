@@ -1,0 +1,217 @@
+﻿@page "/products"
+@rendermode InteractiveServer
+@inject ProductService ProductService
+@inject NavigationManager Nav
+
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📦 Danh sách sản phẩm</h5>
+        <button class="btn btn-primary"
+                @onclick="@(() => Nav.NavigateTo("/products/create"))">
+            ➕ Thêm sản phẩm
+        </button>
+    </div>
+
+    <div class="card-body">
+
+        <!-- ================= SEARCH & FILTER ================= -->
+        <EditForm Model="filter" OnValidSubmit="ApplyFilter">
+            <div class="row g-2 mb-4 align-items-end">
+
+                <div class="col-md-4">
+                    <label class="form-label">Tìm kiếm</label>
+                    <input class="form-control"
+                           placeholder="Tên hoặc mã vạch..."
+                           @bind="filter.Search" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Danh mục</label>
+                    <select class="form-select" @bind="filter.CategoryId">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.CategoryId">@c.CategoryName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Nhà cung cấp</label>
+                    <select class="form-select" @bind="filter.SupplierId">
+                        <option value="">-- Tất cả --</option>
+                        @foreach (var s in suppliers)
+                        {
+                            <option value="@s.SupplierId">@s.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Giá từ</label>
+                    <input type="number" class="form-control" @bind="filter.MinPrice" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Giá đến</label>
+                    <input type="number" class="form-control" @bind="filter.MaxPrice" />
+                </div>
+
+                <div class="col-md-12 d-flex gap-2 mt-2">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            disabled="@isLoading">
+                        🔍 @(isLoading ? "Đang lọc..." : "Lọc")
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="ResetFilter"
+                            disabled="@isLoading">
+                        🔄 Reset
+                    </button>
+                </div>
+
+            </div>
+        </EditForm>
+
+        <!-- ================= TABLE ================= -->
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:60px">#</th>
+                    <th>Tên</th>
+                    <th>Mã vạch</th>
+                    <th>Giá</th>
+                    <th>Đơn vị</th>
+                    <th>Danh mục</th>
+                    <th>NCC</th>
+                    <th class="text-center" style="width:200px">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            ⏳ Đang tải dữ liệu...
+                        </td>
+                    </tr>
+                }
+                else if (products.Any())
+                {
+                    int i = 1;
+                    @foreach (var p in products)
+                    {
+                        <tr>
+                            <td>@i</td>
+                            <td>@p.ProductName</td>
+                            <td>@p.Barcode</td>
+                            <td>@p.Price.ToString("N0") đ</td>
+                            <td>@p.Unit</td>
+                            <td>@GetCategoryName(p.CategoryId)</td>
+                            <td>@GetSupplierName(p.SupplierId)</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-warning me-1"
+                                        @onclick="@(() => Nav.NavigateTo($"/products/edit/{p.ProductId}"))">
+                                    Sửa
+                                </button>
+                                <button class="btn btn-sm btn-outline-info me-1"
+                                        @onclick="@(() => Nav.NavigateTo($"/products/details/{p.ProductId}"))">
+                                    Xem
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="@(() => Nav.NavigateTo($"/products/delete/{p.ProductId}"))">
+                                    Xóa
+                                </button>
+                            </td>
+                        </tr>
+                        i++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            Không có dữ liệu
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    // ================= FILTER MODEL =================
+    class ProductFilterModel
+    {
+        public string? Search { get; set; }
+        public int? CategoryId { get; set; }
+        public int? SupplierId { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+    }
+
+    ProductFilterModel filter = new();
+
+    // ================= DATA =================
+    List<Product> products = new();
+    List<Category> categories = new();
+    List<Supplier> suppliers = new();
+
+    Dictionary<int, string> categoryMap = new();
+    Dictionary<int, string> supplierMap = new();
+
+    bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    async Task LoadAll()
+    {
+        isLoading = true;
+
+        products = await ProductService.GetAllAsync();
+        categories = await ProductService.GetCategoriesAsync();
+        suppliers = await ProductService.GetSuppliersAsync();
+
+        categoryMap = categories.ToDictionary(x => x.CategoryId, x => x.CategoryName);
+        supplierMap = suppliers.ToDictionary(x => x.SupplierId, x => x.Name);
+
+        isLoading = false;
+    }
+
+    async Task ApplyFilter()
+    {
+        isLoading = true;
+
+        products = await ProductService.SearchFilterAsync(
+            filter.Search,
+            filter.CategoryId,
+            filter.SupplierId,
+            filter.MinPrice,
+            filter.MaxPrice
+        );
+
+        isLoading = false;
+    }
+
+    async Task ResetFilter()
+    {
+        filter = new ProductFilterModel();
+        await LoadAll();
+    }
+
+    string GetCategoryName(int? id)
+        => id.HasValue && categoryMap.ContainsKey(id.Value)
+            ? categoryMap[id.Value]
+            : "";
+
+    string GetSupplierName(int? id)
+        => id.HasValue && supplierMap.ContainsKey(id.Value)
+            ? supplierMap[id.Value]
+            : "";
+}
