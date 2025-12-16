@@ -422,7 +422,7 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
             order.Status = "paid";
             await _db.SaveChangesAsync();
 
-            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId} bằng {DisplayPaymentMethod(paymentMethod)}!");
+            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId}!");
         }
 
         // ====================================================================================
