@@ -77,19 +77,18 @@
                 <option value="">Tất cả</option>
                 <option value="pending">Chưa thanh toán</option>
                 <option value="paid">Đã thanh toán</option>
+                <option value="canceled">Đã hủy</option>
             </InputSelect>
         </div>
 
         <div class="col-auto d-grid">
-            <button class="btn btn-primary"
-                    @onclick="ApplyFilter">
+            <button class="btn btn-primary" @onclick="ApplyFilter">
                 Lọc
             </button>
         </div>
 
         <div class="col-auto d-grid">
-            <button class="btn btn-outline-secondary"
-                    @onclick="ClearFilter">
+            <button class="btn btn-outline-secondary" @onclick="ClearFilter">
                 Đặt lại
             </button>
         </div>
@@ -114,34 +113,10 @@
 
             <thead class="table-light">
                 <tr>
-                    <th style="width:8%">
-                        # Mã
-                        <a href="javascript:void(0)"
-                           @onclick='() => SortBy("id")'>
-                            <i class="fas fa-sort"></i>
-                        </a>
-                    </th>
-
-                    <th style="width:22%" class="text-start">
-                        Khách hàng
-                    </th>
-
-                    <th style="width:18%">
-                        Ngày tạo
-                        <a href="javascript:void(0)"
-                           @onclick='() => SortBy("date")'>
-                            <i class="fas fa-sort"></i>
-                        </a>
-                    </th>
-
-                    <th style="width:15%" class="text-end">
-                        Tổng tiền
-                        <a href="javascript:void(0)"
-                           @onclick='() => SortBy("price")'>
-                            <i class="fas fa-sort"></i>
-                        </a>
-                    </th>
-
+                    <th style="width:8%"># Mã</th>
+                    <th style="width:22%" class="text-start">Khách hàng</th>
+                    <th style="width:18%">Ngày tạo</th>
+                    <th style="width:15%" class="text-end">Tổng tiền</th>
                     <th style="width:15%">Trạng thái</th>
                     <th style="width:22%">Hành động</th>
                 </tr>
@@ -157,9 +132,7 @@
                             @item.CustomerName
                         </td>
 
-                        <td>
-                            @item.OrderDate.ToString("dd/MM/yyyy HH:mm")
-                        </td>
+                        <td>@item.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
 
                         <td class="text-end fw-bold text-danger">
                             @item.TotalAmount.ToString("N0") ₫
@@ -168,15 +141,15 @@
                         <td>
                             @if (item.Status == "paid")
                             {
-                                <span class="badge bg-success">
-                                    Đã thanh toán
-                                </span>
+                                <span class="badge bg-success">Đã thanh toán</span>
+                            }
+                            else if (item.Status == "canceled")
+                            {
+                                <span class="badge bg-danger">Đã hủy</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning text-dark">
-                                    Chưa thanh toán
-                                </span>
+                                <span class="badge bg-warning text-dark">Chưa thanh toán</span>
                             }
                         </td>
 
@@ -196,8 +169,7 @@
                                 }
                                 else
                                 {
-                                    <button class="btn btn-sm btn-secondary"
-                                            disabled>
+                                    <button class="btn btn-sm btn-secondary" disabled>
                                         Đã xong
                                     </button>
                                 }
@@ -211,41 +183,29 @@
         @* PAGINATION *@
         <nav>
             <ul class="pagination justify-content-center">
-
                 <li class="page-item @(PagingResult.Page == 1 ? "disabled" : "")">
-                    <a class="page-link"
-                       href="javascript:void(0)"
-                       @onclick="() => GoToPage(PagingResult.Page - 1)">
-                        « Previous
-                    </a>
+                    <a class="page-link" href="javascript:void(0)" 
+                       @onclick="() => GoToPage(PagingResult.Page - 1)">« Previous</a>
                 </li>
 
                 @for (int i = 1; i <= PagingResult.TotalPages; i++)
                 {
                     <li class="page-item @(i == PagingResult.Page ? "active" : "")">
-                        <a class="page-link"
-                           href="javascript:void(0)"
-                           @onclick="() => GoToPage(i)">
-                            @i
-                        </a>
+                        <a class="page-link" href="javascript:void(0)" 
+                           @onclick="() => GoToPage(i)">@i</a>
                     </li>
                 }
 
                 <li class="page-item @(PagingResult.Page == PagingResult.TotalPages || PagingResult.TotalPages == 0 ? "disabled" : "")">
-                    <a class="page-link"
-                       href="javascript:void(0)"
-                       @onclick="() => GoToPage(PagingResult.Page + 1)">
-                        Next »
-                    </a>
+                    <a class="page-link" href="javascript:void(0)" 
+                       @onclick="() => GoToPage(PagingResult.Page + 1)">Next »</a>
                 </li>
-
             </ul>
         </nav>
     }
 </div>
 
 @code {
-
     private PagedResult<OrderListDTO>? PagingResult;
     private OrderFilterDTO Filter = new();
     private bool IsLoading = true;
@@ -277,10 +237,7 @@
 
     private async Task ClearFilter()
     {
-        Filter = new OrderFilterDTO
-        {
-            PageSize = Filter.PageSize
-        };
+        Filter = new OrderFilterDTO { PageSize = Filter.PageSize };
         await LoadOrders();
     }
 

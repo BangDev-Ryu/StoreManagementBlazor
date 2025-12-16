@@ -1,0 +1,225 @@
+@page "/orders_details/{OrderId:int}"
+@rendermode InteractiveServer
+
+@using StoreManagementBlazor.Models.ViewModels
+@using StoreManagementBlazor.Services
+@inject OrdersService OrdersService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Chi tiết đơn hàng #@OrderId</PageTitle>
+
+<div class="container-fluid mt-3" style="user-select:none;">
+    @if (Order == null)
+    {
+        <p><em>Đang tải dữ liệu hoặc đơn hàng không tồn tại...</em></p>
+    }
+    else
+    {
+        <h2>Chi tiết đơn hàng #@OrderId</h2>
+
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div class="alert alert-success">@SuccessMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger">@ErrorMessage</div>
+        }
+
+        <div class="row g-4">
+            <!-- ================= LEFT ================= -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <p><strong>Ngày đặt:</strong><br />@Order.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+                                <p><strong>Khách hàng:</strong><br />@Order.CustomerName</p>
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerPhone))
+                                {
+                                    <p><strong>SĐT:</strong><br />@Order.CustomerPhone</p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerEmail))
+                                {
+                                    <p><strong>Email:</strong><br />@Order.CustomerEmail</p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(Order.CustomerAddress))
+                                {
+                                    <p><strong>Địa chỉ:</strong><br />@Order.CustomerAddress</p>
+                                }
+
+                                <p>
+                                    <strong>Mã KM:</strong><br />
+                                    @if (!string.IsNullOrEmpty(Order.PromoCode))
+                                    {
+                                        <span class="badge bg-success">@Order.PromoCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Không có</span>
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="col-md-6 text-md-end">
+                                <p><strong>Tổng tiền</strong></p>
+                                <h3 class="text-danger fw-bold">
+                                    @Order.TotalAmount.ToString("N0") ₫
+                                </h3>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <!-- ================= STATUS ================= -->
+                        <h5 class="mb-3">Trạng thái đơn hàng</h5>
+
+                        @if (Order.Status == "paid")
+                        {
+                            <div class="alert alert-success">
+                                <strong>Đã thanh toán</strong>
+                            </div>
+                        }
+                        else if (Order.Status == "canceled")
+                        {
+                            <div class="alert alert-secondary">
+                                <strong>Đã hủy</strong>
+                            </div>
+                        }
+                        else if (Order.Status == "pending")
+                        {
+                            <div class="alert alert-warning">
+                                <strong>Chưa thanh toán</strong>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                @* <button class="btn btn-success"
+                                        @onclick="ConfirmPaid">
+                                    ✔ Xác nhận thanh toán
+                                </button> *@
+
+                                <button class="btn btn-danger"
+                                        @onclick="CancelOrder">
+                                    ✖ Hủy đơn
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= RIGHT ================= -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5>Sản phẩm (@Order.Items.Count)</h5>
+
+                        @foreach (var item in Order.Items)
+                        {
+                            <div class="d-flex justify-content-between border-bottom py-2">
+                                <div>
+                                    <strong>@item.ProductName</strong><br />
+                                    <small>@item.Price.ToString("N0") ₫ x @item.Quantity</small>
+                                </div>
+                                <strong class="text-danger">
+                                    @item.Subtotal.ToString("N0") ₫
+                                </strong>
+                            </div>
+                        }
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between">
+                            <strong>Tạm tính</strong>
+                            <span>@RawTotal.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between text-success">
+                            <strong>Giảm giá</strong>
+                            <span>-@Order.DiscountAmount.ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between fs-5 mt-2">
+                            <strong>TỔNG</strong>
+                            <strong class="text-danger fs-4">
+                                @Order.TotalAmount.ToString("N0") ₫
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div class="card-footer text-center">
+                        <a href="/orders" class="btn btn-outline-secondary">
+                            Quay lại
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+
+    private OrderDetailsDTO? Order;
+    private string? SuccessMessage;
+    private string? ErrorMessage;
+
+    decimal RawTotal => Order?.Items.Sum(i => i.Subtotal) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrderDetails();
+    }
+
+    private async Task LoadOrderDetails()
+    {
+        Order = await OrdersService.GetOrderDetailsAsync(OrderId);
+        if (Order == null)
+        {
+            NavigationManager.NavigateTo("/orders");
+        }
+    }
+
+    private async Task ConfirmPaid()
+    {
+        SuccessMessage = null;
+        ErrorMessage = null;
+
+        var (success, message) =
+            await OrdersService.UpdateOrderStatusAsync(OrderId, "paid");
+
+        if (success)
+        {
+            SuccessMessage = "Xác nhận thanh toán thành công";
+            await LoadOrderDetails();
+        }
+        else
+        {
+            ErrorMessage = message;
+        }
+    }
+
+    private async Task CancelOrder()
+    {
+        SuccessMessage = null;
+        ErrorMessage = null;
+
+        var (success, message) =
+            await OrdersService.UpdateOrderStatusAsync(OrderId, "canceled");
+
+        if (success)
+        {
+            SuccessMessage = "Đơn hàng đã được hủy";
+            await LoadOrderDetails();
+        }
+        else
+        {
+            ErrorMessage = message;
+        }
+    }
+}

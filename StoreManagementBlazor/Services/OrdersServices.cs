@@ -422,7 +422,8 @@ private decimal CalculateDiscount(decimal subTotal, Promotion promotion)
             order.Status = "paid";
             await _db.SaveChangesAsync();
 
-            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId} bằng {DisplayPaymentMethod(paymentMethod)}!");
+            // return (true, $"Thanh toán thành công đơn hàng #{order.OrderId} bằng {DisplayPaymentMethod(paymentMethod)}!");
+            return (true, $"Thanh toán thành công đơn hàng #{order.OrderId}");
         }
 
         // ====================================================================================
@@ -582,6 +583,22 @@ public async Task<PagedResult<OrderListDTO>> GetOrderHistoryByCustomerAsync(
         PageSize = pageSize
     };
 }
+
+public async Task<(bool success, string message)> UpdateOrderStatusAsync(
+    int orderId,
+    string status)
+{
+    var order = await _db.Orders.FindAsync(orderId);
+    if (order == null)
+        return (false, "Không tìm thấy đơn hàng");
+
+    order.Status = status;
+    await _db.SaveChangesAsync();
+
+    return (true, "Cập nhật trạng thái thành công");
+}
+
+
 
     }
 }

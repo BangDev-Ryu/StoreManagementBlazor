@@ -27,50 +27,33 @@
         }
 
         <div class="row g-4">
-            <!-- ================= LEFT: ORDER INFO ================= -->
+            <!-- ================= LEFT ================= -->
             <div class="col-lg-8">
                 <div class="card shadow-sm">
                     <div class="card-body">
 
-                        <div class="row mb-3 align-items-center">
+                        <div class="row mb-3">
                             <div class="col-md-6">
-                                <p class="mb-1">
-                                    <strong>Ngày đặt hàng:</strong><br />
-                                    @Order.OrderDate.ToString("dd/MM/yyyy HH:mm")
-                                </p>
-
-                                <p class="mb-1">
-                                    <strong>Khách hàng:</strong><br />
-                                    @Order.CustomerName
-                                </p>
+                                <p><strong>Ngày đặt:</strong><br />@Order.OrderDate.ToString("dd/MM/yyyy HH:mm")</p>
+                                <p><strong>Khách hàng:</strong><br />@Order.CustomerName</p>
 
                                 @if (!string.IsNullOrWhiteSpace(Order.CustomerPhone))
                                 {
-                                    <p class="mb-1">
-                                        <strong>SĐT:</strong><br />
-                                        @Order.CustomerPhone
-                                    </p>
+                                    <p><strong>SĐT:</strong><br />@Order.CustomerPhone</p>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(Order.CustomerEmail))
                                 {
-                                    <p class="mb-1">
-                                        <i class="fas fa-envelope"></i>
-                                        <strong>Email:</strong><br />
-                                        @Order.CustomerEmail
-                                    </p>
+                                    <p><strong>Email:</strong><br />@Order.CustomerEmail</p>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(Order.CustomerAddress))
                                 {
-                                    <p class="mb-1">
-                                        <strong>Địa chỉ:</strong><br />
-                                        @Order.CustomerAddress
-                                    </p>
+                                    <p><strong>Địa chỉ:</strong><br />@Order.CustomerAddress</p>
                                 }
 
-                                <p class="mb-0">
-                                    <strong>Mã khuyến mãi:</strong><br />
+                                <p>
+                                    <strong>Mã KM:</strong><br />
                                     @if (!string.IsNullOrEmpty(Order.PromoCode))
                                     {
                                         <span class="badge bg-success">@Order.PromoCode</span>
@@ -82,8 +65,8 @@
                                 </p>
                             </div>
 
-                            <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                                <p class="mb-1"><strong>Tổng tiền</strong></p>
+                            <div class="col-md-6 text-md-end">
+                                <p><strong>Tổng tiền</strong></p>
                                 <h3 class="text-danger fw-bold">
                                     @Order.TotalAmount.ToString("N0") ₫
                                 </h3>
@@ -92,36 +75,36 @@
 
                         <hr />
 
-                        <!-- ================= PAYMENT SECTION ================= -->
-                        <h5 class="mb-3">Trạng thái & Thanh toán</h5>
+                        <!-- ================= STATUS ================= -->
+                        <h5 class="mb-3">Trạng thái đơn hàng</h5>
 
-                        @if (Order.IsPaid)
+                        @if (Order.Status == "paid")
                         {
                             <div class="alert alert-success">
-                                <strong>Đã thanh toán</strong><br />
-                                Phương thức:
-                                <b>@DisplayPaymentMethod(Order.PaymentMethod!)</b>
+                                <strong>Đã thanh toán</strong>
                             </div>
                         }
-                        else
+                        else if (Order.Status == "canceled")
+                        {
+                            <div class="alert alert-secondary">
+                                <strong>Đã hủy</strong>
+                            </div>
+                        }
+                        else if (Order.Status == "pending")
                         {
                             <div class="alert alert-warning">
                                 <strong>Chưa thanh toán</strong>
                             </div>
 
-                            <div class="d-flex align-items-center gap-2">
-                                <select class="form-select form-select-sm"
-                                        style="width:200px;"
-                                        @bind="SelectedPaymentMethod">
-                                    <option value="cash">Tiền mặt</option>
-                                    <option value="card">Thẻ</option>
-                                    <option value="bank_transfer">Chuyển khoản</option>
-                                    <option value="e-wallet">Ví điện tử</option>
-                                </select>
-
+                            <div class="d-flex gap-2">
                                 <button class="btn btn-success"
-                                        @onclick="PayNow">
-                                    Thanh toán
+                                        @onclick="ConfirmPaid">
+                                    ✔ Xác nhận thanh toán
+                                </button>
+
+                                <button class="btn btn-danger"
+                                        @onclick="CancelOrder">
+                                    ✖ Hủy đơn
                                 </button>
                             </div>
                         }
@@ -129,22 +112,18 @@
                 </div>
             </div>
 
-            <!-- ================= RIGHT: ORDER ITEMS ================= -->
+            <!-- ================= RIGHT ================= -->
             <div class="col-lg-4">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="mb-3">
-                            Sản phẩm trong đơn (@Order.Items.Count)
-                        </h5>
+                        <h5>Sản phẩm (@Order.Items.Count)</h5>
 
                         @foreach (var item in Order.Items)
                         {
-                            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div class="d-flex justify-content-between border-bottom py-2">
                                 <div>
                                     <strong>@item.ProductName</strong><br />
-                                    <small class="text-muted">
-                                        @item.Price.ToString("N0") ₫ x @item.Quantity
-                                    </small>
+                                    <small>@item.Price.ToString("N0") ₫ x @item.Quantity</small>
                                 </div>
                                 <strong class="text-danger">
                                     @item.Subtotal.ToString("N0") ₫
@@ -155,7 +134,7 @@
                         <hr />
 
                         <div class="d-flex justify-content-between">
-                            <strong>Tổng tiền (chưa KM)</strong>
+                            <strong>Tạm tính</strong>
                             <span>@RawTotal.ToString("N0") ₫</span>
                         </div>
 
@@ -165,16 +144,16 @@
                         </div>
 
                         <div class="d-flex justify-content-between fs-5 mt-2">
-                            <strong>TỔNG CỘNG</strong>
+                            <strong>TỔNG</strong>
                             <strong class="text-danger fs-4">
                                 @Order.TotalAmount.ToString("N0") ₫
                             </strong>
                         </div>
                     </div>
 
-                    <div class="card-footer text-center bg-white">
+                    <div class="card-footer text-center">
                         <a href="/orders" class="btn btn-outline-secondary">
-                            Quay lại danh sách
+                            Quay lại
                         </a>
                     </div>
                 </div>
@@ -185,12 +164,12 @@
 
 @code {
     [Parameter] public int OrderId { get; set; }
-    decimal RawTotal => Order?.Items.Sum(i => i.Subtotal) ?? 0;
 
     private OrderDetailsDTO? Order;
-    private string SelectedPaymentMethod = "cash";
     private string? SuccessMessage;
     private string? ErrorMessage;
+
+    decimal RawTotal => Order?.Items.Sum(i => i.Subtotal) ?? 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -200,27 +179,23 @@
     private async Task LoadOrderDetails()
     {
         Order = await OrdersService.GetOrderDetailsAsync(OrderId);
-
         if (Order == null)
         {
             NavigationManager.NavigateTo("/orders");
         }
     }
 
-    private async Task PayNow()
+    private async Task ConfirmPaid()
     {
         SuccessMessage = null;
         ErrorMessage = null;
 
         var (success, message) =
-            await OrdersService.MarkOrderAsPaidAsync(
-                OrderId,
-                SelectedPaymentMethod
-            );
+            await OrdersService.UpdateOrderStatusAsync(OrderId, "paid");
 
         if (success)
         {
-            SuccessMessage = message;
+            SuccessMessage = "Xác nhận thanh toán thành công";
             await LoadOrderDetails();
         }
         else
@@ -229,12 +204,22 @@
         }
     }
 
-    private static string DisplayPaymentMethod(string method) => method switch
+    private async Task CancelOrder()
     {
-        "cash" => "Tiền mặt",
-        "card" => "Thẻ",
-        "bank_transfer" => "Chuyển khoản",
-        "e-wallet" => "Ví điện tử",
-        _ => method
-    };
+        SuccessMessage = null;
+        ErrorMessage = null;
+
+        var (success, message) =
+            await OrdersService.UpdateOrderStatusAsync(OrderId, "canceled");
+
+        if (success)
+        {
+            SuccessMessage = "Đơn hàng đã được hủy";
+            await LoadOrderDetails();
+        }
+        else
+        {
+            ErrorMessage = message;
+        }
+    }
 }

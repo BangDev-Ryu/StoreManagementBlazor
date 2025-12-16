@@ -1,9 +1,91 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
 @attribute [Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Chào mừng</PageTitle>
 
-<h1>Hello, world!</h1>
+@code {
+    private string? userName;
+    private int TotalOrders = 0;
+    private int PaidOrders = 0;
+    private int PendingOrders = 0;
 
-Welcome to your new app.
+    [Inject] private StoreManagementBlazor.Services.OrdersService OrdersService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            userName = user.Identity.Name;
+        }
+
+        // Load đơn hàng demo
+        var result = await OrdersService.GetOrdersAsync(new StoreManagementBlazor.Models.ViewModels.OrderFilterDTO { PageSize = 1000 });
+        TotalOrders = result.TotalItems;
+        PaidOrders = result.Items.Count(i => i.Status == "paid");
+        PendingOrders = result.Items.Count(i => i.Status == "pending");
+    }
+}
+
+<div class="container mt-5">
+    <div class="text-center mb-4">
+        <h1 class="display-4 text-primary">🌟 Chào mừng @userName! 🌟</h1>
+        <p class="lead text-secondary">Chúc bạn một ngày làm việc hiệu quả và vui vẻ 😊</p>
+    </div>
+
+    <div class="row g-4 text-center">
+        <!-- Tổng đơn hàng -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-primary h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Tổng đơn hàng</h5>
+                    <p class="display-5 fw-bold">@TotalOrders</p>
+                    <i class="bi bi-receipt" style="font-size: 2rem; color: #0d6efd;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Đơn đã thanh toán -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-success h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-success">Đã thanh toán</h5>
+                    <p class="display-5 fw-bold">@PaidOrders</p>
+                    <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #198754;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Đơn chưa thanh toán -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-warning h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">Chưa thanh toán</h5>
+                    <p class="display-5 fw-bold">@PendingOrders</p>
+                    <i class="bi bi-exclamation-circle-fill" style="font-size: 2rem; color: #ffc107;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    body {
+        background: linear-gradient(to right, #f8f9fa, #e9ecef);
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+</style>
